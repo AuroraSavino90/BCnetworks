@@ -7,10 +7,12 @@ library(WGCNA)
 library(ggrepel)
 library(ggpubr)
 
-setwd("D:/MBC Dropbox/Lab Poli PhD/Aurora/Projects_wd/BC networks")
+date<-"20241121"
 
-date<-"20241008"
-
+######network data to load
+load("data/Networks/centrality_basal.RData")
+load("data/Networks/metabric.RData")
+load("data/Networks/meta.RData")
 
 ########################################
 ##### FUNCTIONS #########################
@@ -160,13 +162,18 @@ pcaproject<-function(newdata, original_data, modules, ME=eigengenes){
 counts<-read.xlsx("data/gene_count.xlsx")
 rownames(counts)<-counts[,1]
 anno<-counts[,c("gene_id", "gene_name")]
-
 counts_name<-changenames(counts[,c(2:34)], anno = anno)
-RPM<-t(t(counts_name)/colSums(counts_name))*1000000
 
-counts_name<-counts_name[rowSums(counts_name>=10)>2,]
-RPM<-RPM[rownames(counts_name),]
+counts2<-read.table("data/Poli_E2F3_KO-RNAseq-v1-run241011/RNAseq/dataset/v1-run241011/GEP.count", header = T, row.names = 1)
 
+genes<-intersect(rownames(counts_name), rownames(counts2))
+
+counts_tot<-cbind(counts_name[genes,], counts2[genes,])
+
+RPM<-t(t(counts_tot)/colSums(counts_tot))*1000000
+
+counts_tot<-counts_tot[rowSums(counts_tot>=10)>2,]
+RPM<-RPM[rownames(counts_tot),]
 RPMlog<-log2(RPM+1)
 
 ###########################
@@ -175,6 +182,18 @@ RPMlog<-log2(RPM+1)
 
 metadata<-read.xlsx("data/Novogene_metadata.xlsx", rowNames = T)
 metadata$Clone<-factor(metadata$Clone)
+metadata$Seq<-"Novogene"
+
+metadata2<-data.frame(Cell.line=rep("MDAMB468", 9), KO.gene=rep(c("EV", "E2F3", "E2F3"), each=3),
+                     Clone=rep(c(100, 1, 3), each=3), Replicate=rep(1:3, 3), Seq=rep("Oliviero", 9))
+
+metadata<-rbind.data.frame(metadata, metadata2)
+metadata$Clone<-factor(metadata$Clone, levels=c(levels(metadata$Clone), 1, 3))
+
+metadata$Clone[37:39]<-1
+metadata$Clone[40:42]<-3
+
+rownames(metadata)<-colnames(RPMlog)
 
 pca<-PCA(t(RPMlog))
 df<-data.frame(PC1=pca$ind$coord[,1], PC2=pca$ind$coord[,2], PC3=pca$ind$coord[,3],
@@ -184,6 +203,7 @@ df<-data.frame(PC1=pca$ind$coord[,1], PC2=pca$ind$coord[,2], PC3=pca$ind$coord[,
 png(paste("results/",date, "/PCA.png", sep=""), res=300, 1500, 1500)
 ggplot(df, aes(x=PC1, y=PC2, colour=Cell.line))+geom_point()
 dev.off()
+
 
 ################## PCA separating cell lines
 
@@ -223,19 +243,20 @@ dev.off()
 
 ############## pooling clones
 
-dds468 <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="MDAMB468"],
-                                   colData = metadata[metadata$Cell.line=="MDAMB468",],
-                                   design= ~ KO.gene)
+dds468 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="MDAMB468"],
+                                 colData = metadata[metadata$Cell.line=="MDAMB468",],
+                                 design= ~ KO.gene)
 dds468 <- DESeq(dds468)
-dds468 <- results(dds468, contrast = c("KO.gene","TFDP1", "EV"))
+dds468TFDP1 <- results(dds468, contrast = c("KO.gene","TFDP1", "EV"))
+dds468E2F3 <- results(dds468, contrast = c("KO.gene","E2F3", "EV"))
 
-ddsHs <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="Hs578"],
+ddsHs <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="Hs578"],
                                    colData = metadata[metadata$Cell.line=="Hs578",],
                                    design= ~ KO.gene)
 ddsHs <- DESeq(ddsHs)
 ddsHs <- results(ddsHs, contrast = c("KO.gene","TFDP1", "EV"))
 
-dds231 <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="MDAMB231"],
+dds231 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="MDAMB231"],
                                     colData = metadata[metadata$Cell.line=="MDAMB231",],
                                     design= ~ KO.gene)
 dds231 <- DESeq(dds231)
@@ -245,69 +266,83 @@ dds231E2F3 <- results(dds231, contrast = c("KO.gene","E2F3", "EV"))
 
 ################# each clone separately
 
-dds468_4 <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="MDAMB468" & metadata$Clone %in% c("100", "4")],
+dds468_4 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="MDAMB468" & metadata$Clone %in% c("100", "4")],
                                  colData = metadata[metadata$Cell.line=="MDAMB468" & metadata$Clone %in% c("100", "4"),],
                                  design= ~ KO.gene)
 dds468_4 <- DESeq(dds468_4)
 dds468_4 <- results(dds468_4, contrast = c("KO.gene","TFDP1", "EV"))
 
-dds468_9 <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="MDAMB468" & metadata$Clone %in% c("100", "9")],
+dds468_9 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="MDAMB468" & metadata$Clone %in% c("100", "9")],
                                    colData = metadata[metadata$Cell.line=="MDAMB468" & metadata$Clone %in% c("100", "9"),],
                                    design= ~ KO.gene)
 dds468_9 <- DESeq(dds468_9)
 dds468_9 <- results(dds468_9, contrast = c("KO.gene","TFDP1", "EV"))
 
 
-ddsHs_14 <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="Hs578" & metadata$Clone %in% c("100", "14")],
+ddsHs_14 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="Hs578" & metadata$Clone %in% c("100", "14")],
                                 colData = metadata[metadata$Cell.line=="Hs578" & metadata$Clone %in% c("100", "14"),],
                                 design= ~ KO.gene)
 ddsHs_14 <- DESeq(ddsHs_14)
 ddsHs_14 <- results(ddsHs_14, contrast = c("KO.gene","TFDP1", "EV"))
 
-ddsHs_18 <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="Hs578" & metadata$Clone %in% c("100", "18")],
+ddsHs_18 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="Hs578" & metadata$Clone %in% c("100", "18")],
                                    colData = metadata[metadata$Cell.line=="Hs578" & metadata$Clone %in% c("100", "18"),],
                                    design= ~ KO.gene)
 ddsHs_18 <- DESeq(ddsHs_18)
 ddsHs_18 <- results(ddsHs_18, contrast = c("KO.gene","TFDP1", "EV"))
 
-dds231_18 <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "18")],
+dds231_18 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "18")],
                                  colData = metadata[metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "18"),],
                                  design= ~ KO.gene)
 dds231_18 <- DESeq(dds231_18)
 dds231_18 <- results(dds231_18, contrast = c("KO.gene","E2F3", "EV"))
 
-dds231_20 <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "20")],
+dds231_20 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "20")],
                                     colData = metadata[metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "20"),],
                                     design= ~ KO.gene)
 dds231_20 <- DESeq(dds231_20)
 dds231_20 <- results(dds231_20, contrast = c("KO.gene","E2F3", "EV"))
 
-dds231_6 <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "6")],
+dds231_6 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "6")],
                                     colData = metadata[metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "6"),],
                                     design= ~ KO.gene)
 dds231_6 <- DESeq(dds231_6)
 dds231_6 <- results(dds231_6, contrast = c("KO.gene","TFDP1", "EV"))
 
 
-dds231_21 <- DESeqDataSetFromMatrix(countData = counts_name[,metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "21")],
+dds231_21 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "21")],
                                     colData = metadata[metadata$Cell.line=="MDAMB231" & metadata$Clone %in% c("100", "21"),],
                                     design= ~ KO.gene)
 dds231_21 <- DESeq(dds231_21)
 dds231_21 <- results(dds231_21, contrast = c("KO.gene","TFDP1", "EV"))
 
+
+dds468_1 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="MDAMB468" & metadata$Clone %in% c("100", "1")],
+                                   colData = metadata[metadata$Cell.line=="MDAMB468" & metadata$Clone %in% c("100", "1"),],
+                                   design= ~ KO.gene)
+dds468_1 <- DESeq(dds468_1)
+dds468_1 <- results(dds468_1, contrast = c("KO.gene","E2F3", "EV"))
+
+dds468_3 <- DESeqDataSetFromMatrix(countData = counts_tot[,metadata$Cell.line=="MDAMB468" & metadata$Clone %in% c("100", "3")],
+                                   colData = metadata[metadata$Cell.line=="MDAMB468" & metadata$Clone %in% c("100", "3"),],
+                                   design= ~ KO.gene)
+dds468_3 <- DESeq(dds468_3)
+dds468_3 <- results(dds468_3, contrast = c("KO.gene","E2F3", "EV"))
+
 #################################
 ### DEGs overlap
 ##################################
-DEGs_shared<-cbind(ddsHs$log2FoldChange, dds468$log2FoldChange, dds231TFDP1$log2FoldChange, dds231E2F3$log2FoldChange)
+DEGs_shared<-cbind(ddsHs$log2FoldChange, dds468TFDP1$log2FoldChange,dds468E2F3$log2FoldChange, dds231TFDP1$log2FoldChange, dds231E2F3$log2FoldChange)
 DEGs_shared[which(ddsHs$padj>0.05),1]<-0
-DEGs_shared[which(dds468$padj>0.05),2]<-0
-DEGs_shared[which(dds231TFDP1$padj>0.05),3]<-0
-DEGs_shared[which(dds231E2F3$padj>0.05),4]<-0
+DEGs_shared[which(dds468TFDP1$padj>0.05),2]<-0
+DEGs_shared[which(dds468E2F3$padj>0.05),3]<-0
+DEGs_shared[which(dds231TFDP1$padj>0.05),4]<-0
+DEGs_shared[which(dds231E2F3$padj>0.05),5]<-0
 rownames(DEGs_shared)<-rownames(ddsHs)
-colnames(DEGs_shared)<-c("Hs578 TFDP1", "MDAMB468 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3")
+colnames(DEGs_shared)<-c("Hs578 TFDP1", "MDAMB468 TFDP1","MDAMB468 E2F3", "MDAMB231 TFDP1", "MDAMB231 E2F3")
 
 toplot<-DEGs_shared[DEGs_shared[,1]!=0,]
-toplot<-toplot[-which(rowSums(is.na(toplot))==4),]
+toplot<-toplot[-which(rowSums(is.na(toplot))==5),]
 toplot<-toplot[which(rownames(toplot) %in% rownames(centrality_basal)[which(centrality_basal$module=="b_E2F_targets")]),]
 paletteLength <- 50
 myColor <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
@@ -324,15 +359,11 @@ dev.off()
 ### Enrichment test
 ###########################
 
-######network data to load
-load("../../R analyses/METABRIC networks/centrality_basal.RData")
-load("../../R analyses/METABRIC networks/metabric.RData")
-load("../../R analyses/METABRIC networks/meta.RData")
 
 ############## pooling clones
 
-ft<-fishertest_alldat(alldat=c("dds468", "ddsHs","dds231TFDP1", "dds231E2F3"),
-                  names_alldat=c("MDAMB468 TFDP1", "Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3"))
+ft<-fishertest_alldat(alldat=c("ddsHs", "dds231TFDP1", "dds231E2F3","dds468TFDP1","dds468E2F3"),
+                  names_alldat=c("Hs578 TFDP1","MDAMB231 TFDP1", "MDAMB231 E2F3", "MDAMB468 TFDP1", "MDAMB468 E2F3"))
 
 graphics.off()
 png(paste("results/",date, "/Enrich_up_Novogene.png", sep=""), res=300, 1500, 2500)
@@ -347,16 +378,24 @@ png(paste("results/",date, "/Enrich_all_Novogene.png", sep=""), res=300, 1500, 2
 pheatmap(-log10(ft[[3]]),cellwidth=15, cellheight=15)
 dev.off()
 
+png(paste("results/",date, "/Enrich_all_Novogene_scaled.png", sep=""), res=300, 1500, 2500)
+pheatmap(-log10(ft[[3]]),cellwidth=15, cellheight=15, scale="column")
+dev.off()
+
 ############ each clone separately
 
-ft2<-fishertest_alldat(alldat=c("dds468_4","dds468_9",
-                                "ddsHs_14","ddsHs_18",
+ft2<-fishertest_alldat(alldat=c("ddsHs_14","ddsHs_18",
                                 "dds231_6","dds231_21",
-                                "dds231_18", "dds231_20"),
-                      names_alldat=c("MDAMB468 TFDP1 4", "MDAMB468 TFDP1 9", 
-                                     "Hs578 TFDP1 14","Hs578 TFDP1 18",
+                                "dds231_18", "dds231_20",
+                                "dds468_4","dds468_9",
+                                "dds468_1","dds468_3"
+                                ),
+                      names_alldat=c("Hs578 TFDP1 14","Hs578 TFDP1 18",
                                      "MDAMB231 TFDP1 6","MDAMB231 TFDP1 21",
-                                     "MDAMB231 E2F3 18", "MDAMB231 E2F3 20"))
+                                     "MDAMB231 E2F3 18", "MDAMB231 E2F3 20",
+                                     "MDAMB468 TFDP1 4", "MDAMB468 TFDP1 9", 
+                                     "MDAMB468 E2F3 1", "MDAMB468 E2F3 3"
+                                     ))
 
 
 graphics.off()
@@ -372,6 +411,9 @@ png(paste("results/",date, "/Enrich_all_Novogene_clones.png", sep=""), res=300, 
 pheatmap(-log10(ft2[[3]]),cellwidth=15, cellheight=15)
 dev.off()
 
+png(paste("results/",date, "/Enrich_all_Novogene_clones_sclaed.png", sep=""), res=300, 2500, 2500)
+pheatmap(-log10(ft2[[3]]),cellwidth=15, cellheight=15, scale = "column")
+dev.off()
 
 
 ###########################
@@ -385,7 +427,6 @@ cc<-cc[,-20]
 
 #top altered (in significance) are the most positively and negatively correlated modules with E2F_targets
 plot(cc["b_E2F_targets",], rowSums(-log10(ft[[1]][names(cc["b_E2F_targets",]),]))+rowSums(-log10(ft[[2]][names(cc["b_E2F_targets",]),])))
-plot(cc["b_E2F_targets",], rowSums(-log10(ft_o[[1]][names(cc["b_E2F_targets",]),]))+rowSums(-log10(ft_o[[2]][names(cc["b_E2F_targets",]),])))
 
 
 #########################################################
@@ -425,17 +466,29 @@ for(l in unique(pcaproj_hubs$Cell.line)){
 colnames(cd)<-colnames(pcaproj_hubs)[1:19]
 rownames(cd)<-paste(unique(pcaproj_hubs$Cell.line), "TFDP1")
 
+
+cd2<-matrix(nrow=2, ncol=19)
+ind<-1
+
 ctrl<-subset(pcaproj_hubs, Cell.line=="MDAMB231" &  KO.gene=="EV")
 trt<-subset(pcaproj_hubs, Cell.line=="MDAMB231" &  KO.gene=="E2F3")
-
-cd2<-matrix(nrow=1, ncol=19)
-ind<-1
 
 for(i in 1:19){
   cd2[ind,i]<-(mean(trt[,i])-mean(ctrl[,i]))/sqrt((var(trt[,i])+var(ctrl[,i]))/2)
 }
+
+ind<-2
+
+ctrl<-subset(pcaproj_hubs, Cell.line=="MDAMB468" &  KO.gene=="EV")
+trt<-subset(pcaproj_hubs, Cell.line=="MDAMB468" &  KO.gene=="E2F3")
+
+for(i in 1:19){
+  cd2[ind,i]<-(mean(trt[,i])-mean(ctrl[,i]))/sqrt((var(trt[,i])+var(ctrl[,i]))/2)
+}
+
+
 colnames(cd2)<-colnames(pcaproj_hubs)[1:19]
-rownames(cd2)<-"MDAMB231 E2F3"
+rownames(cd2)<-c("MDAMB231 E2F3", "MDAMB468 E2F3")
 
 cd_all<-rbind(cd, cd2)
 
@@ -457,9 +510,9 @@ dev.off()
 ########## plot changes in MEs (Cohen's d) vs modules' correlation with b_E2F_targets
 ## for each KO, the most affected modules are either the most highly or lowly correlated with b_E2F_targets
 
-df<-data.frame(cd=c(t(cd_all)), condition=rep(c("MDAMB468 TFDP1", "Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3"), each= 19), corr=rep(cc["b_E2F_targets",colnames(cd_all)],4),
-               module=rep(colnames(cd_all),4))
-df$condition<-factor(df$condition, levels=c("Hs578 TFDP1","MDAMB468 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3"))
+df<-data.frame(cd=c(t(cd_all)), condition=rep(c("MDAMB468 TFDP1", "Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3", "MDAMB468 E2F3"), each= 19), corr=rep(cc["b_E2F_targets",colnames(cd_all)],5),
+               module=rep(colnames(cd_all),5))
+df$condition<-factor(df$condition, levels=c("Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3","MDAMB468 TFDP1", "MDAMB468 E2F3"))
 
 png(paste("results/",date, "/CohenVScorr_bE2F_Novogene.png", sep=""),res=300, 4500, 2000)
 ggplot(df, aes(x=corr, y=cd, label=module))+geom_point(size=2)+facet_grid(~condition)+geom_smooth(method = lm)+stat_cor(label.x=-0.5, label.y = 17)+geom_text_repel(max.overlaps = 5)+theme_bw()+theme(strip.text=element_text(size = 12, face = "bold"))
@@ -467,21 +520,22 @@ dev.off()
 
 
 ######for each clone separately
-pcaproj_hubs$condition<-factor(paste(paste(pcaproj_hubs$Cell.line, pcaproj_hubs$Clone, sep=" "), pcaproj_hubs$Clone, sep=" "),
+pcaproj_hubs$condition<-factor(paste(paste(pcaproj_hubs$Cell.line, pcaproj_hubs$KO.gene, sep=" "), pcaproj_hubs$Clone, sep=" "),
                                levels=c("Hs578 EV 100", "Hs578 TFDP1 14", "Hs578 TFDP1 18",
                                         "MDAMB231 EV 100",      "MDAMB231 TFDP1 6",  "MDAMB231 TFDP1 21",
                                         "MDAMB231 E2F3 18","MDAMB231 E2F3 20",
-                                        "MDAMB468 EV 100",   "MDAMB468 TFDP1 4",  "MDAMB468 TFDP1 9"))
+                                        "MDAMB468 EV 100",   "MDAMB468 TFDP1 4",  "MDAMB468 TFDP1 9",
+                                        "MDAMB468 E2F3 1",  "MDAMB468 E2F3 3"))
 
 ####plot b_E2F_targets across KOs
 png(paste("results/",date, "/bE2F_project_Novogene_clones.png", sep=""), res=300, 2000, 3000)
 ggplot(pcaproj_hubs, aes(x=Cell.line, y=b_E2F_targets, fill=condition))+geom_boxplot()+theme_classic()+
   scale_fill_manual(values=c("green", "red", "orange",
                         "green", "red", "orange", "blue", "lightblue",
-                        "green", "red", "orange"))
+                        "green", "red", "orange", "blue", "lightblue"))
 dev.off()
 
-cd_sep<-matrix(nrow=8, ncol=19)
+cd_sep<-matrix(nrow=10, ncol=19)
 
 ctrl<-subset(pcaproj_hubs, Cell.line=="MDAMB468" &  KO.gene=="EV")
 trt<-subset(pcaproj_hubs, Cell.line=="MDAMB468" &  KO.gene=="TFDP1" & Clone==4)
@@ -538,12 +592,27 @@ trt<-subset(pcaproj_hubs, Cell.line=="MDAMB231" &  KO.gene=="TFDP1" & Clone==21)
 for(i in 1:19){
   cd_sep[8,i]<-(mean(trt[,i])-mean(ctrl[,i]))/sqrt((var(trt[,i])+var(ctrl[,i]))/2)
 }
+ctrl<-subset(pcaproj_hubs, Cell.line=="MDAMB468" &  KO.gene=="EV")
+trt<-subset(pcaproj_hubs, Cell.line=="MDAMB468" &  KO.gene=="E2F3" & Clone==1)
+
+for(i in 1:19){
+  cd_sep[9,i]<-(mean(trt[,i])-mean(ctrl[,i]))/sqrt((var(trt[,i])+var(ctrl[,i]))/2)
+}
+
+ctrl<-subset(pcaproj_hubs, Cell.line=="MDAMB468" &  KO.gene=="EV")
+trt<-subset(pcaproj_hubs, Cell.line=="MDAMB468" &  KO.gene=="E2F3" & Clone==3)
+
+for(i in 1:19){
+  cd_sep[10,i]<-(mean(trt[,i])-mean(ctrl[,i]))/sqrt((var(trt[,i])+var(ctrl[,i]))/2)
+}
+
 
 colnames(cd_sep)<-colnames(pcaproj_hubs)[1:19]
 rownames(cd_sep)<-c("MDAMB468 TFDP1 4", "MDAMB468 TFDP1 9", 
   "Hs578 TFDP1 14","Hs578 TFDP1 18",
   "MDAMB231 E2F3 18", "MDAMB231 E2F3 20",
-  "MDAMB231 TFDP1 6","MDAMB231 TFDP1 21")
+  "MDAMB231 TFDP1 6","MDAMB231 TFDP1 21",
+  "MDAMB468 E2F3 1", "MDAMB468 E2F3 3")
 
 ########## plot changes in MEs (Cohen's d) for each clone
 ## Clones are coherent (with some outliers)
@@ -566,12 +635,15 @@ dev.off()
 df<-data.frame(cd=c(t(cd_sep)), condition=rep(c("MDAMB468 TFDP1 4", "MDAMB468 TFDP1 9", 
                                                 "Hs578 TFDP1 14","Hs578 TFDP1 18",
                                                 "MDAMB231 E2F3 18", "MDAMB231 E2F3 20",
-                                                "MDAMB231 TFDP1 6","MDAMB231 TFDP1 21"), each= 19), corr=rep(cc["b_E2F_targets",colnames(cd_sep)],8),
-               module=rep(colnames(cd_sep),8))
+                                                "MDAMB231 TFDP1 6","MDAMB231 TFDP1 21",
+                                                "MDAMB468 E2F3 1", "MDAMB468 E2F3 3"), each= 19), corr=rep(cc["b_E2F_targets",colnames(cd_sep)],10),
+               module=rep(colnames(cd_sep),10))
 df$condition<-factor(df$condition, levels=c("Hs578 TFDP1 14","Hs578 TFDP1 18",
-                                            "MDAMB468 TFDP1 4", "MDAMB468 TFDP1 9",
                                             "MDAMB231 TFDP1 6","MDAMB231 TFDP1 21",
-                                            "MDAMB231 E2F3 18", "MDAMB231 E2F3 20"))
+                                            "MDAMB231 E2F3 18", "MDAMB231 E2F3 20",
+                                            "MDAMB468 TFDP1 4", "MDAMB468 TFDP1 9",
+                                            "MDAMB468 E2F3 1", "MDAMB468 E2F3 3"
+                                            ))
 
 png(paste("results/",date, "/CohenVScorr_bE2F_Novogene_clones.png", sep=""),res=300, 6000, 2000)
 ggplot(df, aes(x=corr, y=cd, label=module))+geom_point(size=2)+facet_grid(~condition)+geom_smooth(method = lm)+stat_cor(label.x=-0.5, label.y = 30)+geom_text_repel(max.overlaps = 5)+
@@ -590,9 +662,10 @@ library(org.Hs.eg.db)
 
 ego_up<-list()
 ego_dn<-list()
-for(c in c("dds468",
+for(c in c(
              "ddsHs",
-             "dds231TFDP1", "dds231E2F3")){
+             "dds231TFDP1", "dds231E2F3",
+             "dds468TFDP1","dds468E2F3")){
   
   i<-get(c)
  i_down<-DEGsfilt(DEGs=i, padj=0.05, FC="down")
@@ -631,7 +704,7 @@ for(i in 1:length(ego_dn)){
 
 colnames(allpaths_mat)<-names(ego_dn)
 
-shared_paths<-allpaths_mat[rowSums(allpaths_mat)>2, ]
+shared_paths<-allpaths_mat[rowSums(allpaths_mat)>3, ]
 
 toplot<-shared_paths
 paletteLength <- 50
@@ -655,9 +728,9 @@ m_df <- msigdbr(species = "Homo sapiens", category = "H") %>%
 
 
 fgsea_MsigdbC2CP<-list()
-for(c in c("dds468",
-           "ddsHs",
-           "dds231TFDP1", "dds231E2F3")){
+for(c in c( "ddsHs",
+  "dds231TFDP1", "dds231E2F3",
+  "dds468TFDP1","dds468E2F3")){
   
   i<-get(c)
   
@@ -682,7 +755,7 @@ for(i in 1:length(fgsea_MsigdbC2CP)){
 colnames(allpaths_mat)<-names(fgsea_MsigdbC2CP)
 
 shared_paths<-allpaths_mat[rowSums(allpaths_mat!=0)>0, ]
-colnames(shared_paths)<-c("MDAMB468 TFDP1", "Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3")
+colnames(shared_paths)<-c("Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3","MDAMB468 TFDP1", "MDAMB468 E2F3")
   
 toplot<-shared_paths
 paletteLength <- 50
@@ -699,10 +772,12 @@ dev.off()
 ############# each clone separately
 
 fgsea_MsigdbC2CP_cl<-list()
-for(c in c("dds468_4","dds468_9",
+for(c in c(
            "ddsHs_14","ddsHs_18",
            "dds231_6","dds231_21",
-           "dds231_18", "dds231_20")){
+           "dds231_18", "dds231_20",
+           "dds468_4","dds468_9",
+           "dds468_1","dds468_3")){
   
   i<-get(c)
   
@@ -727,10 +802,12 @@ for(i in 1:length(fgsea_MsigdbC2CP_cl)){
 colnames(allpaths_mat)<-names(fgsea_MsigdbC2CP_cl)
 
 shared_paths<-allpaths_mat[rowSums(allpaths_mat!=0)>0, ]
-colnames(shared_paths)<-c("MDAMB468 TFDP1 4", "MDAMB468 TFDP1 9", 
+colnames(shared_paths)<-c( 
                           "Hs578 TFDP1 14","Hs578 TFDP1 18",
                           "MDAMB231 TFDP1 6","MDAMB231 TFDP1 21",
-                          "MDAMB231 E2F3 18", "MDAMB231 E2F3 20")
+                          "MDAMB231 E2F3 18", "MDAMB231 E2F3 20",
+                          "MDAMB468 TFDP1 4", "MDAMB468 TFDP1 9",
+                          "MDAMB468 E2F3 1", "MDAMB468 E2F3 3")
 
 toplot<-shared_paths
 paletteLength <- 50
@@ -765,9 +842,9 @@ plotEnrich(enriched[[1]], showTerms = 20, numChar = 40, y = "Count", orderBy = "
 
 enriched_up<-list()
 enriched_down<-list()
-for(c in c(c("dds468",
-             "ddsHs",
-             "dds231TFDP1", "dds231E2F3"))){
+for(c in c(c("ddsHs",
+             "dds231TFDP1", "dds231E2F3",
+             "dds468TFDP1","dds468E2F3"))){
   
   i<-get(c)
   i_down<-DEGsfilt(DEGs=i, padj=0.05, FC="down")
@@ -791,7 +868,7 @@ for(i in 1:length(enriched_down)){
 colnames(allpaths_mat)<-names(enriched_down)
 
 shared_paths<-allpaths_mat[rowSums(allpaths_mat!=0)>2, ]
-colnames(shared_paths)<-c("MDAMB468 TFDP1", "Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3")
+colnames(shared_paths)<-c("Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3","MDAMB468 TFDP1", "MDAMB468 E2F3")
 
 toplot<-shared_paths
 paletteLength <- 50
