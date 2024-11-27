@@ -2,6 +2,8 @@ library(openxlsx)
 library(ggplot2)
 library(Rmisc)
 
+date<-"20241121"
+
 #rename experiments based on exp, file of origin, by
 setwd("~/MBC Dropbox/Lab Poli PhD/Aurora/Projects_wd/BC networks")
 colony_num<-read.xlsx("data/Functional data/Functional data table - colony.xlsx", 1)
@@ -238,3 +240,8 @@ t<-TukeyHSD(av468, which=c("treatment2"))
 dc["Prolif",c(7,8)]<-t[[1]][,"diff"][c(8,9)]
 dc["Prolif",c(9,10)]<- -t[[1]][,"diff"][c(2,5)]
 pc["Prolif",c(7:10)]<-t[[1]][,"p adj"][c(8,9,2,5)]
+
+save(dc, file=paste("results/",date, "/dc.RData", sep=""))
+save(pc, file=paste("results/",date, "/pc.RData", sep=""))
+save(d, file=paste("results/",date, "/d.RData", sep=""))
+save(p, file=paste("results/",date, "/p.RData", sep=""))
