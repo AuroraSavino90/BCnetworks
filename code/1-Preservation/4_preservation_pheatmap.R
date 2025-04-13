@@ -81,6 +81,7 @@ myColor <- colorRampPalette(c("#4575B4", "white", "#D73027"))(paletteLength)
 myBreaks <- c(seq(min(unlist(log10(pheat)), na.rm=T), 0, length.out=ceiling(paletteLength/2) + 1), 
               seq(max(unlist(log10(pheat)), na.rm=T)/paletteLength, max(unlist(log10(pheat)), na.rm=T), length.out=floor(paletteLength/2)))
 
+graphics.off()
 png("results/2025/preservation_global_modules_alldatasets.png", res=300, 2500, 2000)
 pheatmap(log10(pheat), cluster_cols = F,  cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor)
 dev.off()
@@ -109,6 +110,7 @@ myColor <- colorRampPalette(c("#4575B4", "white", "#D73027"))(paletteLength)
 myBreaks <- c(seq(min(unlist(log10(pheat)), na.rm=T), 0, length.out=ceiling(paletteLength/2) + 1), 
               seq(max(unlist(log10(pheat)), na.rm=T)/paletteLength, max(unlist(log10(pheat)), na.rm=T), length.out=floor(paletteLength/2)))
 
+graphics.off()
 png("results/2025/preservation_basal_modules_alldatasets.png", res=300, 2500, 2000)
 pheatmap(log10(pheat), cluster_cols = F,  cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor)
 dev.off()
