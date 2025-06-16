@@ -2,10 +2,9 @@ library(openxlsx)
 library(ggplot2)
 library(Rmisc)
 
-date<-"20241121"
+date<-"2025"
 
 #rename experiments based on exp, file of origin, by
-setwd("~/MBC Dropbox/Lab Poli PhD/Aurora/Projects_wd/BC networks")
 colony_num<-read.xlsx("data/Functional data/Functional data table - colony.xlsx", 1)
 colony_num$treatment<-factor(colony_num$treatment, levels=c("WT", "EV", "TFDP1", "E2F3"))
 colony_num$exp_name<-paste(colony_num$by, colony_num$file.of.origin, colony_num$exp)
@@ -51,7 +50,11 @@ colony_num_sel<-colony_num[c(which(colony_num$cell.line %in% c("HS-578T", "MDA-4
 
 
 colony_num_sel$treatment<-factor(colony_num_sel$treatment, levels=c("WT", "EV", "TFDP1", "E2F3"))
+
+png(paste("results/",date, "/colony_num_seq.png", sep=""), res=300, 2500, 2500)
 ggplot(colony_num_sel, aes(x=treatment, y=n.of.colonies))+geom_boxplot()+facet_wrap(~cell.line)
+dev.off()
+
 ggplot(colony_num_sel, aes(x=treatment, y=n.of.colonies))+geom_boxplot()+facet_wrap(~cell.line+exp_name)
 
 png(paste("results/",date, "/colony_num_seq_exp.png", sep=""), res=300, 2500, 2500)
@@ -113,7 +116,10 @@ colony_size_sel<-colony_size[c(which(colony_size$cell.line %in% c("HS-578T", "MD
 
 colony_size_sel$treatment<-factor(colony_size_sel$treatment, levels=c("WT", "EV", "TFDP1", "E2F3"))
 
+png(paste("results/",date, "/colony_size_seq.png", sep=""), res=300, 2500, 2500)
 ggplot(colony_size_sel, aes(x=treatment, y=avg.size))+geom_boxplot()+facet_wrap(~cell.line)
+dev.off()
+
 ggplot(colony_size_sel, aes(x=treatment, y=avg.size))+geom_boxplot()+facet_wrap(~cell.line+exp_name)
 
 png(paste("results/",date, "/colony_size_seq_exp.png", sep=""), res=300, 2500, 2500)
