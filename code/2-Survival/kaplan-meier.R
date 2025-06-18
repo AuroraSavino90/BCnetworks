@@ -3,6 +3,7 @@ library(survival)
 library(survminer)
 
 load(file="data/RData/metabric.RData")
+load(file="data/RData/meta.RData")
 load(file="data/Complete_METABRIC_Clinical_Survival_Data__DSS.rbin")
 load(file="results/2025/centrality_global.RData")
 load(file="results/2025/centrality_basal.RData")
@@ -49,8 +50,8 @@ for(i in 1:ncol(MEs)){
   eigen_class<-cut(MEs[,i], breaks=quantile(MEs[,i],probs=c(0,1,0.5), na.rm=T))
   
   fit<-survfit(Surv(OS,IND)~eigen_class, data=c)
-  ggsurv <- ggsurvplot(fit, data=c, risk.table=F, pval=T, palette=c("blue", "red"),legend.labs=c(paste("low", module, collapse=" "), paste("high",module, collapse=" ")), censor=F, tables.theme = clean_theme())
-  png(paste("results/2025/survival_metabric_DSS_",module,"_5years.png", collapse=""), res=300, 1500, 1500)
+  ggsurv <- ggsurvplot(fit, data=c, risk.table=F, pval=T, palette=c("blue", "red"),legend.labs=c("low ME", "high ME"), censor=F, tables.theme = clean_theme(), ylim=c(0.6, 1))
+  png(paste("results/2025/survival_metabric_DSS_",module,"_5years.png", collapse=""), res=300, 1000, 1000)
   ggsurv$plot <- ggsurv$plot +
     theme(legend.text = element_text(size = 10))
   print(ggsurv)
