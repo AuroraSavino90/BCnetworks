@@ -1,7 +1,6 @@
 #############load network objects and data
 load("data/RData/metabric.RData")
 load("data/RData/meta.RData")
-#load("data/RData/net_metabric_Basal.RData")
 load("results/2025/centrality_basal.RData")
 load("results/2025/centrality_global.RData")
 

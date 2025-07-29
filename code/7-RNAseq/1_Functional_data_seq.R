@@ -13,7 +13,7 @@ colony_size<-read.xlsx("data/Functional data/Functional data table - colony.xlsx
 colony_size$treatment<-factor(colony_size$treatment, levels=c("WT", "EV", "TFDP1", "E2F3"))
 colony_size$exp_name<-paste(colony_size$by, colony_size$file.of.origin, colony_size$exp)
 
-prolif<-read.xlsx("data/Functional data/Functional data table - prolif.xlsx", 1)
+prolif<-read.xlsx("data/Functional data/Functional data table - prolif_SA_Lid giu25.xlsx", 1)
 prolif$treatment<-factor(prolif$treatment, levels=c("WT", "EV", "TFDP1", "E2F3"))
 prolif$exp_name<-paste(prolif$by, prolif$file.of.origin, prolif$exp)
 

@@ -1,4 +1,5 @@
 library(WGCNA)
+library(ggpubr)
 load(file="data/RData/metabric.RData")
 load(file="data/RData/meta.RData")
 load(file="results/2025/centrality_basal.RData")
