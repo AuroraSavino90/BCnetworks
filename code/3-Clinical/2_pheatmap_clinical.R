@@ -62,6 +62,27 @@ moduleTraitCor_tot_grade<-moduleTraitCor_tot[,grep("grade", colnames(moduleTrait
 moduleTraitPvalue_tot_grade<-moduleTraitPvalue_tot[,grep("grade", colnames(moduleTraitPvalue_tot))]
 
 
+library(metap)
+#p merged for high grade
+pmerged_hg<-c()
+for(row in 1:nrow(moduleTraitPvalue_tot_grade)){
+  istwo <- rep(T, ncol(moduleTraitCor_tot_grade))
+  toinvert <- ifelse(moduleTraitCor_tot_grade[row,]<0,T,F)
+  pmerged_hg<-c(pmerged_hg, sumlog(two2one(moduleTraitPvalue_tot_grade[row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged_hg)<-rownames(moduleTraitPvalue_tot_grade)
+
+#p merged for low grade
+pmerged_lg<-c()
+for(row in 1:nrow(moduleTraitPvalue_tot_grade)){
+  istwo <- rep(T, ncol(moduleTraitCor_tot_grade))
+  toinvert <- ifelse(moduleTraitCor_tot_grade[row,]>0,T,F)
+  pmerged_lg<-c(pmerged_lg, sumlog(two2one(moduleTraitPvalue_tot_grade[row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged_lg)<-rownames(moduleTraitPvalue_tot_grade)
+
+gradeavg<-rowMeans(moduleTraitCor_tot_grade)
+
 
 png("results/2025/ModuleGradeRelationship_alldatasets.png", res = 300, width=2000, height = 2000)
 textMatrix = paste(signif(moduleTraitCor_tot_grade, 2), "\n(",
@@ -91,6 +112,26 @@ dev.off();
 moduleTraitCor_tot_age<-moduleTraitCor_tot[,grep("age", colnames(moduleTraitCor_tot))]
 moduleTraitPvalue_tot_age<-moduleTraitPvalue_tot[,grep("age", colnames(moduleTraitCor_tot))]
 
+#p merged for high age
+pmerged_ha<-c()
+for(row in 1:nrow(moduleTraitPvalue_tot_age)){
+  istwo <- rep(T, ncol(moduleTraitCor_tot_age))
+  toinvert <- ifelse(moduleTraitCor_tot_age[row,]<0,T,F)
+  pmerged_ha<-c(pmerged_ha, sumlog(two2one(moduleTraitPvalue_tot_age[row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged_ha)<-rownames(moduleTraitPvalue_tot_age)
+
+#p merged for low age
+pmerged_la<-c()
+for(row in 1:nrow(moduleTraitPvalue_tot_age)){
+  istwo <- rep(T, ncol(moduleTraitCor_tot_age))
+  toinvert <- ifelse(moduleTraitCor_tot_age[row,]>0,T,F)
+  pmerged_la<-c(pmerged_la, sumlog(two2one(moduleTraitPvalue_tot_age[row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged_la)<-rownames(moduleTraitPvalue_tot_age)
+
+ageavg<-rowMeans(moduleTraitCor_tot_age)
+
 png("results/2025/ModuleAgeRelationship_alldatasets.png", res = 300, width=2000, height = 2000)
 
 textMatrix = paste(signif(moduleTraitCor_tot_age, 2), "\n(",
@@ -117,6 +158,69 @@ labeledHeatmap(Matrix = moduleTraitCor_tot_age,
                main = paste("Module - age"))
 dev.off();
 
+#####survival
+load(file="results/2025/pvalue_merge_surv_global.RData")
+
+
+
+#p merged for low survival
+pmerged_ls<-c()
+for(row in 1:nrow(pvalue_merge)){
+  istwo <- rep(T, ncol(pvalue_merge))
+  toinvert <- ifelse(pvalue_merge[row,]>0,T,F)
+  ps<-pvalue_merge[row,]
+  ps[ps<0]<- (-ps[ps<0])
+  ps<-10^(-ps)
+  pmerged_ls<-c(pmerged_ls, sumlog(two2one(ps, two = istwo, invert = toinvert))$p)
+}
+names(pmerged_ls)<-rownames(pvalue_merge)
+pmerged_ls<- pmerged_ls[-which(names(pmerged_ls)=="Unconnected")]
+
+pmerged_hs<-c()
+for(row in 1:nrow(pvalue_merge)){
+  istwo <- rep(T, ncol(pvalue_merge))
+  toinvert <- ifelse(pvalue_merge[row,]<0,T,F)
+  ps<-pvalue_merge[row,]
+  ps[ps<0]<- (-ps[ps<0])
+  ps<-10^(-ps)
+  pmerged_hs<-c(pmerged_hs, sumlog(two2one(ps, two = istwo, invert = toinvert))$p)
+}
+names(pmerged_hs)<-rownames(pvalue_merge)
+pmerged_hs<- pmerged_hs[-which(names(pmerged_hs)=="Unconnected")]
+
+library(ggrepel)
+df<-data.frame(pgrade= -log10(pmerged_hg), page= -log10(pmerged_la), psurv=-log10(pmerged_ls), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
+
+png("results/2025/global_p_highgrade.png", res=300, 1500,1500)
+ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+png("results/2025/global_p_lowage.png", res=300, 1500,1500)
+ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
+
+png("results/2025/global_p_aggressiveness.png", res=300, 2000,2000)
+ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
+
+
+df<-data.frame(pgrade= -log10(pmerged_lg), page= -log10(pmerged_ha), psurv=-log10(pmerged_hs), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
+
+png("results/2025/global_p_lowgrade.png", res=300, 1500,1500)
+ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+png("results/2025/global_p_highage.png", res=300, 1500,1500)
+ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
+
+png("results/2025/global_p_LOWaggressiveness.png", res=300, 2000,2000)
+ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
 
 
 #################################################
@@ -244,5 +348,110 @@ labeledHeatmap(Matrix = moduleTraitCor_tot_age,
                zlim = c(-1,1),
                main = paste("Module - age"))
 dev.off();
+
+
+library(metap)
+#p merged for high grade
+pmerged_hg<-c()
+for(row in 1:nrow(moduleTraitPvalue_tot_grade)){
+  istwo <- rep(T, ncol(moduleTraitCor_tot_grade))
+  toinvert <- ifelse(moduleTraitCor_tot_grade[row,]<0,T,F)
+  pmerged_hg<-c(pmerged_hg, sumlog(two2one(moduleTraitPvalue_tot_grade[row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged_hg)<-rownames(moduleTraitPvalue_tot_grade)
+
+#p merged for low grade
+pmerged_lg<-c()
+for(row in 1:nrow(moduleTraitPvalue_tot_grade)){
+  istwo <- rep(T, ncol(moduleTraitCor_tot_grade))
+  toinvert <- ifelse(moduleTraitCor_tot_grade[row,]>0,T,F)
+  pmerged_lg<-c(pmerged_lg, sumlog(two2one(moduleTraitPvalue_tot_grade[row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged_lg)<-rownames(moduleTraitPvalue_tot_grade)
+
+gradeavg<-rowMeans(moduleTraitCor_tot_grade)
+
+
+#p merged for high age
+pmerged_ha<-c()
+for(row in 1:nrow(moduleTraitPvalue_tot_age)){
+  istwo <- rep(T, ncol(moduleTraitCor_tot_age))
+  toinvert <- ifelse(moduleTraitCor_tot_age[row,]<0,T,F)
+  pmerged_ha<-c(pmerged_ha, sumlog(two2one(moduleTraitPvalue_tot_age[row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged_ha)<-rownames(moduleTraitPvalue_tot_age)
+
+#p merged for low age
+pmerged_la<-c()
+for(row in 1:nrow(moduleTraitPvalue_tot_age)){
+  istwo <- rep(T, ncol(moduleTraitCor_tot_age))
+  toinvert <- ifelse(moduleTraitCor_tot_age[row,]>0,T,F)
+  pmerged_la<-c(pmerged_la, sumlog(two2one(moduleTraitPvalue_tot_age[row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged_la)<-rownames(moduleTraitPvalue_tot_age)
+
+ageavg<-rowMeans(moduleTraitCor_tot_age)
+
+#####survival
+load(file="results/2025/pvalue_merge_surv_basal.RData")
+
+#p merged for low survival
+pmerged_ls<-c()
+for(row in 1:nrow(pvalue_merge_b)){
+  istwo <- rep(T, ncol(pvalue_merge_b))
+  toinvert <- ifelse(pvalue_merge[row,]>0,T,F)
+  ps<-pvalue_merge_b[row,]
+  ps[ps<0]<- (-ps[ps<0])
+  ps<-10^(-ps)
+  pmerged_ls<-c(pmerged_ls, sumlog(two2one(ps, two = istwo, invert = toinvert))$p)
+}
+names(pmerged_ls)<-rownames(pvalue_merge_b)
+pmerged_ls<- pmerged_ls[-which(names(pmerged_ls)=="b_Unconnected")]
+
+pmerged_hs<-c()
+for(row in 1:nrow(pvalue_merge_b)){
+  istwo <- rep(T, ncol(pvalue_merge_b))
+  toinvert <- ifelse(pvalue_merge_b[row,]<0,T,F)
+  ps<-pvalue_merge_b[row,]
+  ps[ps<0]<- (-ps[ps<0])
+  ps<-10^(-ps)
+  pmerged_hs<-c(pmerged_hs, sumlog(two2one(ps, two = istwo, invert = toinvert))$p)
+}
+names(pmerged_hs)<-rownames(pvalue_merge_b)
+pmerged_hs<- pmerged_hs[-which(names(pmerged_hs)=="b_Unconnected")]
+
+library(ggrepel)
+df<-data.frame(pgrade= -log10(pmerged_hg), page= -log10(pmerged_la), psurv=-log10(pmerged_ls), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
+
+png("results/2025/global_p_highgrade_b.png", res=300, 1500,1500)
+ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+png("results/2025/global_p_lowage_b.png", res=300, 1500,1500)
+ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
+
+png("results/2025/global_p_aggressiveness_b.png", res=300, 2000,2000)
+ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
+
+
+df<-data.frame(pgrade= -log10(pmerged_lg), page= -log10(pmerged_ha), psurv=-log10(pmerged_hs), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
+
+png("results/2025/global_p_lowgrade_b.png", res=300, 1500,1500)
+ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+png("results/2025/global_p_highage_b.png", res=300, 1500,1500)
+ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
+
+png("results/2025/global_p_LOWaggressiveness_b.png", res=300, 2000,2000)
+ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
 
 

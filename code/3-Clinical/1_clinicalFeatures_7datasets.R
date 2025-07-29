@@ -349,8 +349,8 @@ pvalue_good_tot_b[,6]<-p[[2]]
 
 #TCGA
 
-load("../../../Data_downloaded/TCGA/TCGA-BRCA_Primary Tumor_dedupl.RData")
-load("../../../Data_downloaded/TCGA/TCGA-BRCA_clinical.RData")
+load("../../../Data/Data_downloaded/TCGA/TCGA-BRCA_Primary Tumor_dedupl.RData")
+load("../../../Data/Data_downloaded/TCGA/TCGA-BRCA_clinical.RData")
 
 library(TCGAbiolinks)
 BRCA_subtype <- TCGAquery_subtype(tumor = "BRCA")
@@ -524,6 +524,8 @@ pvalue_merge[is.na(pvalue_poor_tot)==F]<-(log10(pvalue_poor_tot)[is.na(pvalue_po
 rownames(pvalue_merge)<-unique(centrality_global$module)
 colnames(pvalue_merge)<-c("NKI", "TRANSBIG", "UNT", "UPP", "MAINZ", "VDX", "TCGA","METABRIC")
 
+save(pvalue_merge, file="results/2025/pvalue_merge_surv_global.RData")
+
 paletteLength <- 50
 myColor <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
 # length(breaks) == length(paletteLength) + 1
@@ -537,11 +539,13 @@ dev.off()
 pvalue_good_tot_b[pvalue_good_tot_b<2.2*10^(-16)]<-2.2*10^(-16)
 pvalue_poor_tot_b[pvalue_poor_tot_b<2.2*10^(-16)]<-2.2*10^(-16)
 
-pvalue_merge<-(-log10(pvalue_good_tot_b))
-pvalue_merge[is.na(pvalue_poor_tot_b)==F]<-(log10(pvalue_poor_tot_b)[is.na(pvalue_poor_tot_b)==F])
+pvalue_merge_b<-(-log10(pvalue_good_tot_b))
+pvalue_merge_b[is.na(pvalue_poor_tot_b)==F]<-(log10(pvalue_poor_tot_b)[is.na(pvalue_poor_tot_b)==F])
 
-rownames(pvalue_merge)<-unique(centrality_basal$module)
-colnames(pvalue_merge)<-c("NKI", "TRANSBIG", "UNT", "UPP", "MAINZ", "VDX", "TCGA","METABRIC")
+rownames(pvalue_merge_b)<-unique(centrality_basal$module)
+colnames(pvalue_merge_b)<-c("NKI", "TRANSBIG", "UNT", "UPP", "MAINZ", "VDX", "TCGA","METABRIC")
+
+save(pvalue_merge_b, file="results/2025/pvalue_merge_surv_basal.RData")
 
 paletteLength <- 50
 myColor <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
@@ -550,7 +554,7 @@ myColor <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
 
 
 png("results/2025/Suvr_7datasets_5years_b.png", res=500, 4000, 3000)
-pheatmap(pvalue_merge[-which(rownames(pvalue_merge)=="b_Unconnected"),], cellwidth = 15, cellheight = 15, color = myColor)
+pheatmap(pvalue_merge_b[-which(rownames(pvalue_merge_b)=="b_Unconnected"),], cellwidth = 15, cellheight = 15, color = myColor)
 dev.off()
 
 
