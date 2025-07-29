@@ -1,7 +1,4 @@
 set.seed(123)
-library(CELLector)
-library(tidyverse)
-
 ####setting paths
 pathdata <- "data"
 pathscript <- "pipelines"
@@ -64,11 +61,36 @@ colnames(cc)<-colnames(scaled_depFC)
 rownames(pval)<-unique(centrality_basal$module)
 colnames(pval)<-colnames(scaled_depFC)
 
-adj_pval<-p.adjust(pval, method = "BH")
+#remove unconnected
+pval<-pval[-1,]
+cc<-cc[-1,]
+
+#compute average correlation
+cc_mean<-rowMeans(cc)
+
+#adjust pvalue
+adj_pval<-matrix(p.adjust(pval, method = "BH"), nrow=nrow(pval))
+colnames(adj_pval)<-colnames(pval)
+rownames(adj_pval)<-rownames(pval)
+#cut pvalue at 2.2*10^-16
+adj_pval[adj_pval<2.2*10^(-16)]<-2.2*10^(-16)
+
+#merge pvalues with the Fisher method
+library(metap)
+pmerged<-c()
+for(r in 1:nrow(adj_pval)){
+  istwo <- rep(T, ncol(adj_pval))
+  toinvert <- ifelse(cc[r,]>0, T, F)
+pmerged<-c(pmerged, sumlog(two2one(adj_pval[r,], two = istwo, invert = toinvert))$p)
+}
+pmerged[pmerged==0]<-10^(-299)
+
+names(pmerged)<-rownames(adj_pval)
+
 cc[adj_pval>0.05]<-NA
 cc<-t(cc)
-#remove unconnected
-cc<-cc[,-1]
+rownames(cc)<-CMP_annot$model_name[match(rownames(cc), CMP_annot$model_id)]
+
 
 library(pheatmap)
 
@@ -76,8 +98,18 @@ paletteLength <- 50
 myColor <- colorRampPalette(c("#4575B4", "white"))(paletteLength)
 myBreaks <- c(seq(min(unlist(cc), na.rm=T),0, length.out=floor(paletteLength)))
 
-png("results/2025/CRISPR_corr.png", res=300, 2000, 3000)
-pheatmap((cc[,names(sort(colSums(cc, na.rm=T)))]), cluster_cols = F, cluster_rows = F, cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor)
+anno_p<-data.frame(meanR= -cc_mean, mergedp= -log10(pmerged))
+
+# Define a continuous color gradient
+continuous_colors <- colorRampPalette(c("white", "mediumorchid4"))(100)
+
+# Map the continuous annotation to colors
+annotation_colors <- list(meanR = continuous_colors)
+
+
+graphics.off()
+png("results/2025/CRISPR_corr.png", res=300, 3000, 3000)
+pheatmap((cc[,names(sort(colSums(cc, na.rm=T)))]), cluster_cols = F, cluster_rows = F, cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor, annotation_col = anno_p, annotation_colors = annotation_colors)
 dev.off()
 
 

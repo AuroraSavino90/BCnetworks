@@ -10,9 +10,9 @@ library(ggpubr)
 date<-"2025"
 
 ######network data to load
-load("data/Networks/centrality_basal.RData")
-load("data/Networks/metabric.RData")
-load("data/Networks/meta.RData")
+load("results/2025/centrality_basal.RData")
+load("data/RData/metabric.RData")
+load("data/RData/meta.RData")
 
 ########################################
 ##### FUNCTIONS #########################
@@ -119,9 +119,20 @@ fishertest_alldat<-function(alldat=c("dds468",
   colnames(ft_down_tot)<-names_alldat
   colnames(ft_all_tot)<-names_alldat
   
+  
   ft_up_tot<-ft_up_tot[-1,]
   ft_down_tot<-ft_down_tot[-1,]
   ft_all_tot<-ft_all_tot[-1,]
+  
+  for(row in 1:nrow(ft_up_tot)){
+    ft_up_tot[row,]<-p.adjust(ft_up_tot[row,])
+  }
+  for(row in 1:nrow(ft_down_tot)){
+    ft_down_tot[row,]<-p.adjust(ft_down_tot[row,])
+  }
+  for(row in 1:nrow(ft_all_tot)){
+    ft_all_tot[row,]<-p.adjust(ft_all_tot[row,])
+  }
   
   ft_up_tot[ft_up_tot<2.2*10^(-16)]<-2.2*10^(-16)
   ft_down_tot[ft_down_tot<2.2*10^(-16)]<-2.2*10^(-16)
@@ -200,8 +211,8 @@ df<-data.frame(PC1=pca$ind$coord[,1], PC2=pca$ind$coord[,2], PC3=pca$ind$coord[,
                PC4=pca$ind$coord[,4], PC5=pca$ind$coord[,5],
                metadata)
 
-png(paste("results/",date, "/PCA.png", sep=""), res=300, 1500, 1500)
-ggplot(df, aes(x=PC1, y=PC2, colour=Cell.line))+geom_point()
+png(paste("results/",date, "/PCA.png", sep=""), res=300, 1300, 1000)
+ggplot(df, aes(x=PC1, y=PC2, colour=Cell.line))+geom_point()+theme_classic()
 dev.off()
 
 
@@ -212,8 +223,8 @@ df<-data.frame(PC1=pca231$ind$coord[,1], PC2=pca231$ind$coord[,2], PC3=pca231$in
                PC4=pca231$ind$coord[,4], PC5=pca231$ind$coord[,5],
                metadata[metadata$Cell.line=="MDAMB231",])
 
-png(paste("results/",date, "/PCA231.png", sep=""), res=300, 1500, 1500)
-ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()
+png(paste("results/",date, "/PCA231.png", sep=""), res=300, 1300, 1000)
+ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()+theme_classic()
 dev.off()
 
 pca468<-PCA(t(RPMlog[,metadata$Cell.line=="MDAMB468"]))
@@ -221,8 +232,8 @@ df<-data.frame(PC1=pca468$ind$coord[,1], PC2=pca468$ind$coord[,2], PC3=pca468$in
                PC4=pca468$ind$coord[,4], PC5=pca468$ind$coord[,5],
                metadata[metadata$Cell.line=="MDAMB468",])
 
-png(paste("results/",date, "/PCA468.png", sep=""), res=300, 1500, 1500)
-ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()
+png(paste("results/",date, "/PCA468.png", sep=""), res=300, 1300, 1000)
+ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()+theme_classic()
 dev.off()
 
 pcaHs<-PCA(t(RPMlog[,metadata$Cell.line=="Hs578"]))
@@ -230,8 +241,8 @@ df<-data.frame(PC1=pcaHs$ind$coord[,1], PC2=pcaHs$ind$coord[,2], PC3=pcaHs$ind$c
                PC4=pcaHs$ind$coord[,4], PC5=pcaHs$ind$coord[,5],
                metadata[metadata$Cell.line=="Hs578",])
 
-png(paste("results/",date, "/PCAHs.png", sep=""), res=300, 1500, 1500)
-ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()
+png(paste("results/",date, "/PCAHs.png", sep=""), res=300, 1300, 1000)
+ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()+theme_classic()
 dev.off()
 
 
@@ -278,7 +289,7 @@ colnames(DEGs_shared)<-c("Hs578 TFDP1", "MDAMB468 TFDP1","MDAMB468 E2F3", "MDAMB
 
 toplot<-DEGs_shared[DEGs_shared[,1]!=0,]
 toplot<-toplot[-which(rowSums(is.na(toplot))==5),]
-toplot<-toplot[which(rownames(toplot) %in% rownames(centrality_basal)[which(centrality_basal$module=="b_E2F_targets")]),]
+toplot<-toplot[which(rownames(toplot) %in% rownames(centrality_basal)[which(centrality_basal$module=="b_E2F_TARGETS")]),]
 paletteLength <- 50
 myColor <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
 myBreaks <- c(seq(min(unlist(toplot), na.rm=T), 0, length.out=ceiling(paletteLength/2) + 1),
@@ -300,39 +311,59 @@ dev.off()
 ft<-fishertest_alldat(alldat=c("ddsHs", "dds231TFDP1", "dds231E2F3","dds468TFDP1","dds468E2F3"),
                   names_alldat=c("Hs578 TFDP1","MDAMB231 TFDP1", "MDAMB231 E2F3", "MDAMB468 TFDP1", "MDAMB468 E2F3"))
 
+library(metap)
+istwo <- rep(F, nrow(ft[[1]]))
+toinvert <- rep(F, nrow(ft[[1]]))
+pmerged<-c()
+for(row in 1:nrow(ft[[1]])){
+  pmerged<-c(pmerged, sumlog(two2one(ft[[1]][row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged)<-rownames(ft[[1]])
+anno_p<-data.frame(mergedp= -log10(pmerged), npositive=rowSums(ft[[1]]<0.05))
+rownames(anno_p)<-rownames(ft[[1]])
+
 graphics.off()
-png(paste("results/",date, "/Enrich_up_Novogene.png", sep=""), res=300, 1500, 2500)
-pheatmap(-log10(ft[[1]]),cellwidth=15, cellheight=15)
+png(paste("results/",date, "/Enrich_up_Novogene.png", sep=""), res=300, 2500, 2500)
+pheatmap(-log10(ft[[1]]), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
 dev.off()
 
-png(paste("results/",date, "/Enrich_down_Novogene.png", sep=""), res=300, 1500, 2500)
-pheatmap(-log10(ft[[2]]),cellwidth=15, cellheight=15)
+istwo <- rep(F, nrow(ft[[2]]))
+toinvert <- rep(F, nrow(ft[[2]]))
+pmerged<-c()
+for(row in 1:nrow(ft[[2]])){
+  pmerged<-c(pmerged, sumlog(two2one(ft[[2]][row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged)<-rownames(ft[[2]])
+anno_p<-data.frame(mergedp= -log10(pmerged), npositive=rowSums(ft[[2]]<0.05))
+rownames(anno_p)<-rownames(ft[[2]])
+
+png(paste("results/",date, "/Enrich_down_Novogene.png", sep=""), res=300, 2500, 2500)
+pheatmap(-log10(ft[[2]]), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
 dev.off()
 
-png(paste("results/",date, "/Enrich_all_Novogene.png", sep=""), res=300, 1500, 2500)
-pheatmap(-log10(ft[[3]]),cellwidth=15, cellheight=15)
+istwo <- rep(F, nrow(ft[[3]]))
+toinvert <- rep(F, nrow(ft[[3]]))
+pmerged<-c()
+for(row in 1:nrow(ft[[3]])){
+  pmerged<-c(pmerged, sumlog(two2one(ft[[3]][row,], two = istwo, invert = toinvert))$p)
+}
+names(pmerged)<-rownames(ft[[3]])
+anno_p<-data.frame(mergedp= -log10(pmerged), npositive=rowSums(ft[[3]]<0.05))
+rownames(anno_p)<-rownames(ft[[3]])
+
+png(paste("results/",date, "/Enrich_all_Novogene.png", sep=""), res=300, 2500, 2500)
+pheatmap(-log10(ft[[3]]), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
 dev.off()
 
-png(paste("results/",date, "/Enrich_all_Novogene_scaled.png", sep=""), res=300, 1500, 2500)
+png(paste("results/",date, "/Enrich_all_Novogene_scaled.png", sep=""), res=300, 2500, 2500)
 pheatmap(-log10(ft[[3]]),cellwidth=15, cellheight=15, scale="column")
 dev.off()
-
-###########################
-##correlation between modules
-##########################
-
-MEs<-moduleEigengenes(t(metabric[,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"]), centrality_basal$module)$eigengenes
-colnames(MEs)<-gsub("ME", "", colnames(MEs))
-cc<-cor(MEs)
-cc<-cc[,-20]
-
-#top altered (in significance) are the most positively and negatively correlated modules with E2F_targets
-plot(cc["b_E2F_targets",], rowSums(-log10(ft[[1]][names(cc["b_E2F_targets",]),]))+rowSums(-log10(ft[[2]][names(cc["b_E2F_targets",]),])))
-
 
 #########################################################
 ### projection of b_E2F_targets MEs on new data  
 #########################################################
+MEs<-moduleEigengenes(t(metabric[,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"]), centrality_basal$module)$eigengenes
+colnames(MEs)<-gsub("ME", "", colnames(MEs))
 
 #####project MEs on Novogene data
 
@@ -343,10 +374,50 @@ rownames(pcaproj_hubs)<-colnames(RPMlog)
 pcaproj_hubs<-cbind.data.frame(pcaproj_hubs, metadata)
 pcaproj_hubs$KO.gene<-factor(pcaproj_hubs$KO.gene, levels=c("EV", "TFDP1", "E2F3"))
 
+library(rstatix)
+stat.test <- pcaproj_hubs %>%
+  group_by(Cell.line) %>%
+  wilcox_test(b_E2F_TARGETS ~ KO.gene, ref.group = "EV")
+
+stat.test <- stat.test %>% add_y_position()
+
+
+p <- ggboxplot(pcaproj_hubs, x = "KO.gene", y = "b_E2F_TARGETS",
+               color = "KO.gene", palette = "jco",
+               facet.by = "Cell.line", 
+               add = "jitter")
+#  Add p-value
+p<-p +
+  stat_pvalue_manual(stat.test, label = "p = {p.adj}", tip.length = 0.01)
+
+
 ####plot b_E2F_targets across KOs
-png(paste("results/",date, "/bE2F_project_Novogene.png", sep=""), res=300, 1500, 1500)
-ggplot(pcaproj_hubs, aes(x=Cell.line, y=b_E2F_targets, fill=KO.gene))+geom_boxplot()+theme_classic()
+png(paste("results/",date, "/bE2F_project_Novogene.png", sep=""), res=300, 2000, 2000)
+print(p)
 dev.off()
+
+
+stat.test <- pcaproj_hubs %>%
+  group_by(Cell.line) %>%
+  wilcox_test(b_E2F_TARGETS ~ KO.gene, ref.group = "EV")
+
+stat.test <- stat.test %>% add_y_position(scales="free")
+
+p <- ggboxplot(pcaproj_hubs, x = "KO.gene", y = "b_E2F_TARGETS",
+               color = "KO.gene", palette = "jco",
+               add = "jitter")+ scale_y_continuous(expand = c(.1, .1)) 
+
+p<-facet(p, facet.by = "Cell.line", ncol = 1, scales="free")
+
+p<-p+
+  stat_pvalue_manual(stat.test, label = "p = {p.adj}", tip.length = 0.01) + 
+  theme(strip.text.x = element_text(size = 12))
+
+####plot b_E2F_targets across KOs
+png(paste("results/",date, "/bE2F_project_Novogene_long.png", sep=""), res=300, 1000, 3000)
+print(p)
+dev.off()
+
 
 #######compute the cohens'd
 
@@ -355,12 +426,12 @@ ind<-0
 for(l in unique(pcaproj_hubs$Cell.line)){
   ind<-ind+1
   
-    ctrl<-subset(pcaproj_hubs, Cell.line==l &  KO.gene=="EV")
-    trt<-subset(pcaproj_hubs, Cell.line==l &  KO.gene=="TFDP1")
-    
-    for(i in 1:19){
-      cd[ind,i]<-(mean(trt[,i])-mean(ctrl[,i]))/sqrt((var(trt[,i])+var(ctrl[,i]))/2)
-    }
+  ctrl<-subset(pcaproj_hubs, Cell.line==l &  KO.gene=="EV")
+  trt<-subset(pcaproj_hubs, Cell.line==l &  KO.gene=="TFDP1")
+  
+  for(i in 1:19){
+    cd[ind,i]<-(mean(trt[,i])-mean(ctrl[,i]))/sqrt((var(trt[,i])+var(ctrl[,i]))/2)
+  }
   
 }
 
@@ -408,19 +479,24 @@ png(paste("results/",date, "/Cohen_bE2F_Novogene.png", sep=""),res=300, 1500, 25
 pheatmap(t(toplot),   cellwidth=15, cellheight=15,  keep.dendro=T, color =myColor, breaks = myBreaks)
 dev.off()
 
+
+
 ######################
 ## correlation with functional impact
 #####################
 load(file=paste("results/",date, "/d.RData", sep=""))
-png(paste("results/",date, "/Cohen_bE2F_vs_functional.png", sep=""),res=300, 1500, 1500)
-plot(abs(toplot[c(2,3,4,1,5),"b_E2F_targets"]), scale(d[3,])+scale(d[1,]), pch=19, ylab="Scaled functional impact", xlab="Cohen's d (absolute value)")
+
+df<-data.frame(cd=abs(toplot[c(2,3,4,1,5),"b_E2F_TARGETS"]), fi=scale(d[3,])+scale(d[1,]), condition=rownames(toplot)[c(2,3,4,1,5)])
+png(paste("results/",date, "/Cohen_bE2F_vs_functional.png", sep=""),res=300, 1000, 1000)
+ggplot(df, aes(x=cd, y=fi, label=condition))+geom_point(size=2)+geom_smooth(method="lm", se=F)+geom_label_repel()+theme_classic()+
+  xlab("Cohen's d (absolute value)") + ylab("Scaled functional impact")
 dev.off()
-cor.test(abs(toplot[c(2,3,4,1,5),"b_E2F_targets"]), scale(d[3,])+scale(d[1,]))
+cor.test(abs(toplot[c(2,3,4,1,5),"b_E2F_TARGETS"]), scale(d[3,])+scale(d[1,]))
 
 ########## plot changes in MEs (Cohen's d) vs modules' correlation with b_E2F_targets
 ## for each KO, the most affected modules are either the most highly or lowly correlated with b_E2F_targets
 
-df<-data.frame(cd=c(t(cd_all)), condition=rep(c("MDAMB468 TFDP1", "Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3", "MDAMB468 E2F3"), each= 19), corr=rep(cc["b_E2F_targets",colnames(cd_all)],5),
+df<-data.frame(cd=c(t(cd_all)), condition=rep(c("MDAMB468 TFDP1", "Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3", "MDAMB468 E2F3"), each= 19), corr=rep(cc["b_E2F_TARGETS",colnames(cd_all)],5),
                module=rep(colnames(cd_all),5))
 df$condition<-factor(df$condition, levels=c("Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3","MDAMB468 TFDP1", "MDAMB468 E2F3"))
 
