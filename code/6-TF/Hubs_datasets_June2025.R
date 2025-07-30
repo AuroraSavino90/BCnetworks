@@ -468,7 +468,7 @@ mat<-mat[,-which(colnames(mat)=="b_Unconnected")]
 
 mat_adj<-mat
 for(col in 1:ncol(mat_adj)){
-  mat_adj[,col]<-p.adjust(mat[,col])
+  mat_adj[,col]<-p.adjust(mat[,col], method="BH")
 }
 mat_adj[mat_adj<2.2*10^(-16)]<-2.2*10^(-16)
 
@@ -508,7 +508,7 @@ mat<-mat[,-which(colnames(mat)=="b_Unconnected")]
 
 mat_adj<-mat
 for(col in 1:ncol(mat_adj)){
-  mat_adj[,col]<-p.adjust(mat[,col])
+  mat_adj[,col]<-p.adjust(mat[,col], method="BH")
 }
 mat_adj[mat_adj<2.2*10^(-16)]<-2.2*10^(-16)
 
@@ -550,7 +550,7 @@ mat<-mat[,-which(colnames(mat)=="b_Unconnected")]
 
 mat_adj<-mat
 for(col in 1:ncol(mat_adj)){
-  mat_adj[,col]<-p.adjust(mat[,col])
+  mat_adj[,col]<-p.adjust(mat[,col], method="BH")
 }
 mat_adj[mat_adj<2.2*10^(-16)]<-2.2*10^(-16)
 
