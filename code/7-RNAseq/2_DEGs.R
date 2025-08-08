@@ -215,6 +215,9 @@ png(paste("results/",date, "/PCA.png", sep=""), res=300, 1300, 1000)
 ggplot(df, aes(x=PC1, y=PC2, colour=Cell.line))+geom_point()+theme_classic()
 dev.off()
 
+pdf(paste("results/",date, "/PCA.pdf", sep=""),4,3)
+ggplot(df, aes(x=PC1, y=PC2, colour=Cell.line))+geom_point()+theme_classic()
+dev.off()
 
 ################## PCA separating cell lines
 
@@ -227,6 +230,10 @@ png(paste("results/",date, "/PCA231.png", sep=""), res=300, 1300, 1000)
 ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()+theme_classic()
 dev.off()
 
+pdf(paste("results/",date, "/PCA231.pdf", sep=""), 4,3)
+ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()+theme_classic()
+dev.off()
+
 pca468<-PCA(t(RPMlog[,metadata$Cell.line=="MDAMB468"]))
 df<-data.frame(PC1=pca468$ind$coord[,1], PC2=pca468$ind$coord[,2], PC3=pca468$ind$coord[,3],
                PC4=pca468$ind$coord[,4], PC5=pca468$ind$coord[,5],
@@ -236,12 +243,20 @@ png(paste("results/",date, "/PCA468.png", sep=""), res=300, 1300, 1000)
 ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()+theme_classic()
 dev.off()
 
+pdf(paste("results/",date, "/PCA468.pdf", sep=""), 4,3)
+ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()+theme_classic()
+dev.off()
+
 pcaHs<-PCA(t(RPMlog[,metadata$Cell.line=="Hs578"]))
 df<-data.frame(PC1=pcaHs$ind$coord[,1], PC2=pcaHs$ind$coord[,2], PC3=pcaHs$ind$coord[,3],
                PC4=pcaHs$ind$coord[,4], PC5=pcaHs$ind$coord[,5],
                metadata[metadata$Cell.line=="Hs578",])
 
 png(paste("results/",date, "/PCAHs.png", sep=""), res=300, 1300, 1000)
+ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()+theme_classic()
+dev.off()
+
+pdf(paste("results/",date, "/PCAHs.pdf", sep=""), 4,3)
 ggplot(df, aes(x=PC1, y=PC2, colour=KO.gene, shape=as.factor(Clone)))+geom_point()+theme_classic()
 dev.off()
 
@@ -327,6 +342,10 @@ png(paste("results/",date, "/Enrich_up_Novogene.png", sep=""), res=300, 2500, 25
 pheatmap(-log10(ft[[1]]), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
 dev.off()
 
+pdf(paste("results/",date, "/Enrich_up_Novogene.pdf", sep=""), 8, 7)
+pheatmap(-log10(ft[[1]]), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
+dev.off()
+
 istwo <- rep(F, nrow(ft[[2]]))
 toinvert <- rep(F, nrow(ft[[2]]))
 pmerged<-c()
@@ -338,6 +357,10 @@ anno_p<-data.frame(mergedp= -log10(pmerged), npositive=rowSums(ft[[2]]<0.05))
 rownames(anno_p)<-rownames(ft[[2]])
 
 png(paste("results/",date, "/Enrich_down_Novogene.png", sep=""), res=300, 2500, 2500)
+pheatmap(-log10(ft[[2]]), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
+dev.off()
+
+pdf(paste("results/",date, "/Enrich_down_Novogene.pdf", sep=""), 8, 7)
 pheatmap(-log10(ft[[2]]), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
 dev.off()
 
@@ -355,7 +378,15 @@ png(paste("results/",date, "/Enrich_all_Novogene.png", sep=""), res=300, 2500, 2
 pheatmap(-log10(ft[[3]]), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
 dev.off()
 
+pdf(paste("results/",date, "/Enrich_all_Novogene.pdf", sep=""), 8, 7)
+pheatmap(-log10(ft[[3]]), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
+dev.off()
+
 png(paste("results/",date, "/Enrich_all_Novogene_scaled.png", sep=""), res=300, 2500, 2500)
+pheatmap(-log10(ft[[3]]),cellwidth=15, cellheight=15, scale="column")
+dev.off()
+
+pdf(paste("results/",date, "/Enrich_all_Novogene_scaled.pdf", sep=""), 8, 7)
 pheatmap(-log10(ft[[3]]),cellwidth=15, cellheight=15, scale="column")
 dev.off()
 
@@ -396,6 +427,10 @@ png(paste("results/",date, "/bE2F_project_Novogene.png", sep=""), res=300, 2000,
 print(p)
 dev.off()
 
+pdf(paste("results/",date, "/bE2F_project_Novogene.pdf", sep=""), 8, 7)
+print(p)
+dev.off()
+
 
 stat.test <- pcaproj_hubs %>%
   group_by(Cell.line) %>%
@@ -418,6 +453,9 @@ png(paste("results/",date, "/bE2F_project_Novogene_long.png", sep=""), res=300, 
 print(p)
 dev.off()
 
+pdf(paste("results/",date, "/bE2F_project_Novogene_long.pdf", sep=""), 3.5, 11)
+print(p)
+dev.off()
 
 #######compute the cohens'd
 
@@ -479,6 +517,9 @@ png(paste("results/",date, "/Cohen_bE2F_Novogene.png", sep=""),res=300, 1500, 25
 pheatmap(t(toplot),   cellwidth=15, cellheight=15,  keep.dendro=T, color =myColor, breaks = myBreaks)
 dev.off()
 
+pdf(paste("results/",date, "/Cohen_bE2F_Novogene.pdf", sep=""),8,7)
+pheatmap(t(toplot),   cellwidth=15, cellheight=15,  keep.dendro=T, color =myColor, breaks = myBreaks)
+dev.off()
 
 
 ######################
@@ -493,6 +534,12 @@ ggplot(df, aes(x=cd, y=fi, label=condition))+geom_point(size=2)+geom_smooth(meth
 dev.off()
 cor.test(abs(toplot[c(2,3,4,1,5),"b_E2F_TARGETS"]), scale(d[3,])+scale(d[1,]))
 
+df$condition<-c("Hs578T TFDP1",    "MDA-MB-231 TFDP1", "MDA-MB-231 E2F3",  "MDA-MB-468 TFDP1", "MDA-MB-468 E2F3")
+pdf(paste("results/",date, "/Cohen_bE2F_vs_functional.pdf", sep=""),4,4)
+ggplot(df, aes(x=cd, y=fi, label=condition))+geom_point(size=2)+geom_smooth(method="lm", se=F)+geom_label_repel()+theme_classic()+
+  xlab("Cohen's d (absolute value)") + ylab("Scaled functional impact")
+dev.off()
+
 ########## plot changes in MEs (Cohen's d) vs modules' correlation with b_E2F_targets
 ## for each KO, the most affected modules are either the most highly or lowly correlated with b_E2F_targets
 
@@ -503,194 +550,3 @@ df$condition<-factor(df$condition, levels=c("Hs578 TFDP1", "MDAMB231 TFDP1", "MD
 png(paste("results/",date, "/CohenVScorr_bE2F_Novogene.png", sep=""),res=300, 4500, 2000)
 ggplot(df, aes(x=corr, y=cd, label=module))+geom_point(size=2)+facet_grid(~condition)+geom_smooth(method = lm)+stat_cor(label.x=-0.5, label.y = 17)+geom_text_repel(max.overlaps = 5)+theme_bw()+theme(strip.text=element_text(size = 12, face = "bold"))
 dev.off()
-
-
-
-######################################
-######## GO enrichment
-######################################
-
-library(clusterProfiler)
-library(org.Hs.eg.db)
-
-ego_up<-list()
-ego_dn<-list()
-for(c in c(
-             "ddsHs",
-             "dds231TFDP1", "dds231E2F3",
-             "dds468TFDP1","dds468E2F3")){
-  
-  i<-get(c)
- i_down<-DEGsfilt(DEGs=i, padj=0.05, FC="down")
-  i_up<-DEGsfilt(DEGs=i, padj=0.05, FC="up")
-  
-  ego_up[[c]] <- enrichGO(gene          = i_up,
-                          universe      = rownames(i),
-                          OrgDb         = org.Hs.eg.db,
-                          keyType = "SYMBOL",
-                          ont           = "BP",
-                          pAdjustMethod = "BH",
-                          pvalueCutoff  = 0.05,
-                          qvalueCutoff  = 0.05)
-  ego_dn[[c]] <- enrichGO(gene          = i_down,
-                          universe      = rownames(i),
-                          OrgDb         = org.Hs.eg.db,
-                          keyType = "SYMBOL",
-                          ont           = "BP",
-                          pAdjustMethod = "BH",
-                          pvalueCutoff  = 0.05,
-                          qvalueCutoff  = 0.05)
-  
-}
-
-
-####GO up
-allpaths<-c()
-for(i in 1:length(ego_dn)){
-  allpaths<-union(allpaths, ego_dn[[i]]$Description[ego_dn[[i]]$p.adjust<0.05])
-}
-allpaths_mat<-matrix(0,nrow=length(allpaths), ncol=length(ego_dn))
-rownames(allpaths_mat)<-allpaths
-for(i in 1:length(ego_dn)){
-  allpaths_mat[ego_dn[[i]]$Description[which(ego_dn[[i]]$p.adjust<0.05)],i]<-1
-}
-
-colnames(allpaths_mat)<-names(ego_dn)
-
-shared_paths<-allpaths_mat[rowSums(allpaths_mat)>3, ]
-
-toplot<-shared_paths
-paletteLength <- 50
-myColor <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
-myBreaks <- c(seq(min(unlist(toplot), na.rm=T), 0, length.out=ceiling(paletteLength/2) + 1),
-              seq(max(unlist(toplot), na.rm=T)/paletteLength, max(unlist(toplot), na.rm=T), length.out=floor(paletteLength/2)))
-length(myBreaks) == length(paletteLength) + 1
-
-#graphics.off()
-#pdf(paste("results/",date, "/GO_up_shared.pdf", sep=""), 10, 30)
-#pheatmap(toplot,   cellwidth=15, cellheight=15,  keep.dendro=T)
-#dev.off()
-
-###################################
-############ GSEA
-###################################
-
-library(msigdbr)
-m_df <- msigdbr(species = "Homo sapiens", category = "H") %>% 
-  dplyr::select(gs_name, gene_symbol)
-
-
-fgsea_MsigdbC2CP<-list()
-for(c in c( "ddsHs",
-  "dds231TFDP1", "dds231E2F3",
-  "dds468TFDP1","dds468E2F3")){
-  
-  i<-get(c)
-  
-  forgesea<-unlist(i$log2FoldChange)
-  names(forgesea)<-rownames(i)
-  forgesea<-forgesea[!is.na(forgesea)]
-  fgsea_MsigdbC2CP[[c]]<-GSEA(sort(forgesea, decreasing=T), TERM2GENE=m_df, pvalueCutoff = 1, maxGSSize = 10000)
-}
-
-
-allpaths<-c()
-for(i in 1:length(fgsea_MsigdbC2CP)){
-  allpaths<-union(allpaths, fgsea_MsigdbC2CP[[i]]$Description[fgsea_MsigdbC2CP[[i]]$p.adjust<0.05])
-}
-allpaths_mat<-matrix(0,nrow=length(allpaths), ncol=length(fgsea_MsigdbC2CP))
-rownames(allpaths_mat)<-allpaths
-for(i in 1:length(fgsea_MsigdbC2CP)){
-  allpaths_mat[fgsea_MsigdbC2CP[[i]]$Description[which(fgsea_MsigdbC2CP[[i]]$p.adjust<0.05)],i]<-fgsea_MsigdbC2CP[[i]]$NES[which(fgsea_MsigdbC2CP[[i]]$p.adjust<0.05)]
-}
-
-
-colnames(allpaths_mat)<-names(fgsea_MsigdbC2CP)
-
-shared_paths<-allpaths_mat[rowSums(allpaths_mat!=0)>0, ]
-colnames(shared_paths)<-c("Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3","MDAMB468 TFDP1", "MDAMB468 E2F3")
-  
-toplot<-shared_paths
-paletteLength <- 50
-myColor <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
-myBreaks <- c(seq(min(unlist(toplot), na.rm=T), 0, length.out=ceiling(paletteLength/2) + 1),
-              seq(max(unlist(toplot), na.rm=T)/paletteLength, max(unlist(toplot), na.rm=T), length.out=floor(paletteLength/2)))
-length(myBreaks) == length(paletteLength) + 1
-
-graphics.off()
-png(paste("results/",date, "/GSEA_MSigDB_Hallmarks_shared.png", sep=""), res=300, 2000, 2000)
-pheatmap(toplot,   cellwidth=15, cellheight=15,  keep.dendro=T, breaks = myBreaks, color = myColor)
-dev.off()
-
-
-####################################
-####### enrichr
-###################################
-
-library(enrichR)
-websiteLive <- getOption("enrichR.live")
-if (websiteLive) {
-  listEnrichrSites()
-  setEnrichrSite("Enrichr") # Human genes   
-}
-if (websiteLive) dbs <- listEnrichrDbs()
-if (websiteLive) head(dbs)
-
-dbs <- c("GO_Biological_Process_2023","WikiPathways_2024_Human", "Reactome_2022", "TF_Perturbations_Followed_by_Expression", "ENCODE_TF_ChIP-seq_2015")
-
-enriched_up<-list()
-enriched_down<-list()
-for(c in c(c("ddsHs",
-             "dds231TFDP1", "dds231E2F3",
-             "dds468TFDP1","dds468E2F3"))){
-  
-  i<-get(c)
-  i_down<-DEGsfilt(DEGs=i, padj=0.05, FC="down")
-  i_up<-DEGsfilt(DEGs=i, padj=0.05, FC="up")
-  enriched_up[[c]] <- enrichr(i_up, dbs)
-  enriched_down[[c]] <- enrichr(i_down, dbs)
-}
-
-for(j in 1:length(dbs)){
-allpaths<-c()
-for(i in 1:length(enriched_down)){
-  allpaths<-union(allpaths, enriched_down[[i]][[j]]$Term[enriched_down[[i]][[j]]$Adjusted.P.value<0.05])
-}
-allpaths_mat<-matrix(0,nrow=length(allpaths), ncol=length(enriched_down))
-rownames(allpaths_mat)<-allpaths
-for(i in 1:length(enriched_down)){
-  allpaths_mat[enriched_down[[i]][[j]]$Term[which(enriched_down[[i]][[j]]$Adjusted.P.value<0.05)],i]<-enriched_down[[i]][[j]]$Combined.Score[which(enriched_down[[i]][[j]]$Adjusted.P.value<0.05)]
-}
-
-
-colnames(allpaths_mat)<-names(enriched_down)
-
-shared_paths<-allpaths_mat[rowSums(allpaths_mat!=0)>2, ]
-colnames(shared_paths)<-c("Hs578 TFDP1", "MDAMB231 TFDP1", "MDAMB231 E2F3","MDAMB468 TFDP1", "MDAMB468 E2F3")
-
-toplot<-shared_paths
-paletteLength <- 50
-myColor <- colorRampPalette(c("white", "red"))(paletteLength)
-myBreaks <- c(seq( 0, length.out=ceiling(paletteLength)+1))
-length(myBreaks) == length(paletteLength) + 1
-
-graphics.off()
-png(paste("results/",date, "/", dbs[j],"_Novogene.png", sep=""), res=300, 4000, nrow(toplot)*100)
-pheatmap(toplot,   cellwidth=15, cellheight=15,  keep.dendro=T, breaks = myBreaks, color = myColor)
-dev.off()
-}
-
-
-######################################
-##### Gene Essentiality
-#########################################
-
-###load input data
-load("data/Sanger_Broad_higQ_scaled_depFC.RData")
-CMP_annot <- read.csv("data/model_list_20210611.csv") # from https://cog.sanger.ac.uk/cmp/download/model_list_20210611.csv
-
-ess<-scaled_depFC[c("E2F3", "TFDP1", "TEAD4", "CEBPG", "PTTG1"),c("MDA-MB-468","MDA-MB-231","Hs-578-T")]
-write.xlsx(data.frame(ess), file=paste("results/",date, "/essentiality.xlsx", sep=""), rowNames=T)
-
-
-

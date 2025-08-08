@@ -32,6 +32,12 @@ for(i in 1:ncol(MEs)){
   print(ggsurv)
   dev.off()
   
+  pdf(paste("results/2025/survival_metabric_DSS_",module,".pdf", collapse=""), 5, 5)
+  ggsurv$plot <- ggsurv$plot +
+    theme(legend.text = element_text(size = 10))
+  print(ggsurv)
+  dev.off()
+  
 }
 
 
@@ -56,6 +62,12 @@ for(i in 1:ncol(MEs)){
   print(ggsurv)
   dev.off()
   
+  pdf(paste("results/2025/survival_metabric_DSS_",module,"_5years.pdf", collapse=""), 5, 5)
+  ggsurv$plot <- ggsurv$plot +
+    theme(legend.text = element_text(size = 10))
+  print(ggsurv)
+  dev.off()
+  
 }
 
 
@@ -75,6 +87,12 @@ for(i in 1:ncol(MEs_basal)){
   fit<-survfit(Surv(OS,IND)~eigen_class, data=c)
   ggsurv <- ggsurvplot(fit, data=c, risk.table=F, pval=T, palette=c("blue", "red"),legend.labs=c(paste("low", module, collapse=" "), paste("high",module, collapse=" ")), censor=F, tables.theme = clean_theme())
   png(paste("results/2025/survival_metabric_DSS_basal_",module,".png", collapse=""), res=300, 1500, 1500)
+  ggsurv$plot <- ggsurv$plot +
+    theme(legend.text = element_text(size = 10))
+  print(ggsurv)
+  dev.off()
+  
+  pdf(paste("results/2025/survival_metabric_DSS_basal_",module,".pdf", collapse=""),  5, 5)
   ggsurv$plot <- ggsurv$plot +
     theme(legend.text = element_text(size = 10))
   print(ggsurv)
@@ -107,61 +125,12 @@ for(i in 1:ncol(MEs_basal)){
   print(ggsurv)
   dev.off()
   
-}
-names(pval)<-colnames(MEs_basal)
-
-##kaplan-meier for the top 25 TF in b_E2F_targets
-TFblue<-read.csv("TF_blue_basal.csv", header=F, stringsAsFactors = F)
-for(gene in TFblue[,1]){
-  a=data.frame(ID=colnames(metabric[,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"]),OS=surv5years[,1], IND=surv5years[,2])
-  b=data.frame(eigen_gene=metabric[gene,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"])
-  c=cbind(a,b)
-  eigen_class<-cut(metabric[gene,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"], breaks=quantile(metabric[gene,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"],probs=c(0,1,0.5), na.rm=T))
-  
-  pp<-survdiff(Surv(OS,IND)~eigen_class, data=c)
-  pval<-1-pchisq(pp$chisq, length(pp$n)-1)
-  
-  fit<-survfit(Surv(OS,IND)~eigen_class, data=c)
-  ggsurv <- ggsurvplot(fit, data=c, risk.table=F, pval=T, legend.labs=c(paste("low", gene, collapse=" "), paste("high",gene, collapse=" ")), censor=F, tables.theme = clean_theme(), ylim=c(0.6,1), pval.coord=c(200,0.7), palette=c("blue", "red"))
-  png(paste("survival_metabric_DSS_5years",gene,".png", collapse=""), 800, 800, res=200)
-  ggsurv$plot <- ggsurv$plot + 
-    theme(legend.text = element_text(size = 14))
+  pdf(paste("results/2025/survival_metabric_DSS_basal_",module,"_5years.pdf", collapse=""), 5, 5)
+  ggsurv$plot <- ggsurv$plot +
+    theme(legend.text = element_text(size = 10))
   print(ggsurv)
   dev.off()
   
 }
+names(pval)<-colnames(MEs_basal)
 
-
-for(gene in TFblue[,1]){
-  a=data.frame(ID=colnames(metabric),OS=surv5years[,1], IND=surv5years[,2])
-  b=data.frame(eigen_gene=metabric[gene,])
-  c=cbind(a,b)
-  eigen_class<-cut(metabric[gene,], breaks=quantile(metabric[gene,],probs=c(0,1,0.5), na.rm=T))
-  
-  
-  fit<-survfit(Surv(OS,IND)~eigen_class, data=c)
-  pp<-survdiff(Surv(OS,IND)~eigen_class, data=c)
-  pval<-1-pchisq(pp$chisq, length(pp$n)-1)
-  print(paste(gene, signif(pval, digits = 2)))
-  
-}
-
-
-for(i in 1:21){
-  a=data.frame(ID=colnames(metabric),OS=surv5years[,1], IND=surv5years[,2])
-  b=data.frame(ID=rownames(MEs_metabric), eigen_gene=MEs_metabric[,i])
-  module<-gsub("ME", "", colnames(MEs_metabric)[i])
-  c=cbind(a,b)
-  fit=survfit(Surv(OS,IND)~1, data=c)
-  plot(fit)
-  
-  #eigen_class<-cut(MEs_brain[type=="Basal",i],2)
-  eigen_class<-cut(MEs_metabric[,i], breaks=quantile(MEs_metabric[,i],probs=c(0,1,0.5), na.rm=T))
-  
-  
-  fit<-survfit(Surv(OS,IND)~eigen_class, data=c)
-  pp<-survdiff(Surv(OS,IND)~eigen_class, data=c)
-  pval<-1-pchisq(pp$chisq, length(pp$n)-1)
-  print(paste(module, alt_names[match(module, labels2colors(1:20))], signif(pval, digits = 2)))
-  
-}

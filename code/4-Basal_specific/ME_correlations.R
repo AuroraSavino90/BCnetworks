@@ -26,7 +26,15 @@ png("results/2025/Heatmap_b_cormod.png", res=300, 3000, 3000)
 pheatmap(toplot, cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor)
 dev.off()
 
+pdf("results/2025/Heatmap_b_cormod.pdf", 10,10)
+pheatmap(toplot, cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor)
+dev.off()
+
 png("results/2025/bE2F_vs_bEMT.png", res=300, 1300, 1300)
+ggplot(MEs_basal, aes(x=b_E2F_TARGETS, y=b_EPITHELIAL_MESENCHYMAL_TRANSITION))+geom_point()+geom_smooth(method="lm", se=F)+theme_classic()
+dev.off()
+
+pdf("results/2025/bE2F_vs_bEMT.pdf", 4,4)
 ggplot(MEs_basal, aes(x=b_E2F_TARGETS, y=b_EPITHELIAL_MESENCHYMAL_TRANSITION))+geom_point()+geom_smooth(method="lm", se=F)+theme_classic()
 dev.off()
 

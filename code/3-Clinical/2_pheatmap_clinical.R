@@ -1,3 +1,5 @@
+library(WGCNA)
+
 #load pre-computed moduletrait relationships
 
 load("results/2025/moduleTraitPvalue_METABRIC.RData")
@@ -84,7 +86,7 @@ names(pmerged_lg)<-rownames(moduleTraitPvalue_tot_grade)
 gradeavg<-rowMeans(moduleTraitCor_tot_grade)
 
 
-png("results/2025/ModuleGradeRelationship_alldatasets.png", res = 300, width=2000, height = 2000)
+pdf("results/2025/ModuleGradeRelationship_alldatasets.pdf", width=7, height = 7)
 textMatrix = paste(signif(moduleTraitCor_tot_grade, 2), "\n(",
                    signif(moduleTraitPvalue_tot_grade, 1), ")", sep = "");
 
@@ -132,7 +134,7 @@ names(pmerged_la)<-rownames(moduleTraitPvalue_tot_age)
 
 ageavg<-rowMeans(moduleTraitCor_tot_age)
 
-png("results/2025/ModuleAgeRelationship_alldatasets.png", res = 300, width=2000, height = 2000)
+pdf("results/2025/ModuleAgeRelationship_alldatasets.pdf", 7,7)
 
 textMatrix = paste(signif(moduleTraitCor_tot_age, 2), "\n(",
                    signif(moduleTraitPvalue_tot_age, 1), ")", sep = "");
@@ -195,13 +197,27 @@ png("results/2025/global_p_highgrade.png", res=300, 1500,1500)
 ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
+pdf("results/2025/global_p_highgrade.pdf", 5,5)
+ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+
 png("results/2025/global_p_lowage.png", res=300, 1500,1500)
 ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
+pdf("results/2025/global_p_lowage.pdf", 5,5)
+ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+
 df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
 
 png("results/2025/global_p_aggressiveness.png", res=300, 2000,2000)
+ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
+
+pdf("results/2025/global_p_aggressiveness.pdf", 5,5)
 ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 
@@ -212,13 +228,25 @@ png("results/2025/global_p_lowgrade.png", res=300, 1500,1500)
 ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
+pdf("results/2025/global_p_lowgrade.pdf", 5, 5)
+ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
 png("results/2025/global_p_highage.png", res=300, 1500,1500)
+ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+pdf("results/2025/global_p_highage.pdf", 5,5)
 ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
 df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
 
 png("results/2025/global_p_LOWaggressiveness.png", res=300, 2000,2000)
+ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
+
+pdf("results/2025/global_p_LOWaggressiveness.pdf", 5,5)
 ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 
@@ -295,7 +323,7 @@ moduleTraitPvalue_tot_age<-moduleTraitPvalue_tot[,grep("age", colnames(moduleTra
 
 
 
-png("results/2025/ModuleGradeRelationship_alldatasets_basal.png", res = 300, width=2000, height = 2000)
+pdf("results/2025/ModuleGradeRelationship_alldatasets_basal.pdf",7,7)
 textMatrix = paste(signif(moduleTraitCor_tot_grade, 2), "\n(",
                    signif(moduleTraitPvalue_tot_grade, 1), ")", sep = "");
 
@@ -323,7 +351,7 @@ dev.off();
 
 
 
-png("results/2025/ModuleAgeRelationship_alldatasets_basal.png", res = 300, width=2000, height = 2000)
+pdf("results/2025/ModuleAgeRelationship_alldatasets_basal.pdf", 7,7)
 
 textMatrix = paste(signif(moduleTraitCor_tot_age, 2), "\n(",
                    signif(moduleTraitPvalue_tot_age, 1), ")", sep = "");
@@ -427,7 +455,15 @@ png("results/2025/global_p_highgrade_b.png", res=300, 1500,1500)
 ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
+pdf("results/2025/global_p_highgrade_b.pdf", 5,5)
+ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
 png("results/2025/global_p_lowage_b.png", res=300, 1500,1500)
+ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+pdf("results/2025/global_p_lowage_b.pdf", 5,5)
 ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
@@ -437,6 +473,9 @@ png("results/2025/global_p_aggressiveness_b.png", res=300, 2000,2000)
 ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 
+pdf("results/2025/global_p_aggressiveness_b.pdf", 5,5)
+ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
 
 df<-data.frame(pgrade= -log10(pmerged_lg), page= -log10(pmerged_ha), psurv=-log10(pmerged_hs), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
 
@@ -444,13 +483,25 @@ png("results/2025/global_p_lowgrade_b.png", res=300, 1500,1500)
 ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
+pdf("results/2025/global_p_lowgrade_b.pdf", 5,5)
+ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
 png("results/2025/global_p_highage_b.png", res=300, 1500,1500)
+ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+pdf("results/2025/global_p_highage_b.pdf", 5,5)
 ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
 df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
 
 png("results/2025/global_p_LOWaggressiveness_b.png", res=300, 2000,2000)
+ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
+
+pdf("results/2025/global_p_LOWaggressiveness_b.pdf", 5,5)
 ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 

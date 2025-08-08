@@ -17,14 +17,18 @@ surv_data_global_5years_poor$pval[which(surv_data_global_5years_poor$pval==0)]<-
 
 for(i in 1:length(unique(centrality_global$module))){
   if(length(na.omit(-log10(surv_data_global_5years_poor$pval[centrality_global$module==unique(centrality_global$module)[i]])))>=10){
-png(paste("results/2025/DSS5years_global_",unique(centrality_global$module)[i],"_poor.png", sep=""), res=300, 1100, 1100)
-
-df<-data.frame(kWithin=centrality_global$kWithin[centrality_global$module==unique(centrality_global$module)[i]] ,
-               pvalue=-log10(surv_data_global_5years_poor$pval[centrality_global$module==unique(centrality_global$module)[i]]))
-df$pvalue[which(df$pvalue> -log10(2.2*10^(-16)))]<- -log10(2.2*10^(-16))
-p<-ggplot(df, aes(x=kWithin, y=pvalue))+geom_point()+geom_smooth(method="lm")+theme_bw()+ggtitle(label = unique(centrality_global$module)[i])+ylab(label = "-log10(p-value)")
+    df<-data.frame(kWithin=centrality_global$kWithin[centrality_global$module==unique(centrality_global$module)[i]] ,
+                   pvalue=-log10(surv_data_global_5years_poor$pval[centrality_global$module==unique(centrality_global$module)[i]]))
+    df$pvalue[which(df$pvalue> -log10(2.2*10^(-16)))]<- -log10(2.2*10^(-16))
+    p<-ggplot(df, aes(x=kWithin, y=pvalue))+geom_point()+geom_smooth(method="lm")+theme_bw()+ggtitle(label = unique(centrality_global$module)[i])+ylab(label = "-log10(p-value)")
+    png(paste("results/2025/DSS5years_global_",unique(centrality_global$module)[i],"_poor.png", sep=""), res=300, 1100, 1100)
 print(p)
 dev.off()
+
+pdf(paste("results/2025/DSS5years_global_",unique(centrality_global$module)[i],"_poor.pdf", sep=""), 5,5)
+print(p)
+dev.off()
+
 }
 }
 
@@ -62,11 +66,14 @@ surv_data_global_5years_good$pval[which(surv_data_global_5years_good$pval==0)]<-
 
 for(i in 1:length(unique(centrality_global$module))){
   if(length(na.omit(-log10(surv_data_global_5years_good$pval[centrality_global$module==unique(centrality_global$module)[i]])))>=10){
-    png(paste("results/2025/DSS5years_global_",unique(centrality_global$module)[i],"_good.png", sep=""), res=300, 1100, 1100)
     df<-data.frame(kWithin=centrality_global$kWithin[centrality_global$module==unique(centrality_global$module)[i]] ,
                    pvalue=-log10(surv_data_global_5years_good$pval[centrality_global$module==unique(centrality_global$module)[i]]))
     df$pvalue[which(df$pvalue> -log10(2.2*10^(-16)))]<- -log10(2.2*10^(-16))
     p<-ggplot(df, aes(x=kWithin, y=pvalue))+geom_point()+geom_smooth(method="lm")+theme_bw()+ggtitle(label = unique(centrality_global$module)[i])+ylab(label = "-log10(p-value)")
+    png(paste("results/2025/DSS5years_global_",unique(centrality_global$module)[i],"_good.png", sep=""), res=300, 1100, 1100)
+     print(p)
+    dev.off()
+    pdf(paste("results/2025/DSS5years_global_",unique(centrality_global$module)[i],"_good.pdf", sep=""), 5,5)
     print(p)
     dev.off()
   }
@@ -124,6 +131,10 @@ png("results/2025/Correlation_kWithinSurvival_metabric_global_pheat.png", res=30
 pheatmap(cor_mat[order(rowSums(cbind(cor_mat[,1],-cor_mat[,2]), na.rm=T), decreasing = T),],  cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor, cluster_rows = F, cluster_cols = F)
 dev.off()
 
+pdf("results/2025/Correlation_kWithinSurvival_metabric_global_pheat.pdf", 10,10)
+pheatmap(cor_mat[order(rowSums(cbind(cor_mat[,1],-cor_mat[,2]), na.rm=T), decreasing = T),],  cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor, cluster_rows = F, cluster_cols = F)
+dev.off()
+
 ###################################
 ######## Basal modules
 ######################################
@@ -137,12 +148,15 @@ surv_data_basal_5years_poor$pval[which(surv_data_basal_5years_poor$pval==0)]<-2.
 
 for(i in 1:length(unique(centrality_global$module))){
   if(length(na.omit(-log10(surv_data_basal_5years_poor$pval[centrality_basal$module==unique(centrality_basal$module)[i]])))>=10){
-    png(paste("results/2025/DSS5years_basal_",unique(centrality_basal$module)[i],"_poor.png", sep=""), res=300, 1100, 1100)
-    
     df<-data.frame(kWithin=centrality_basal$kWithin[centrality_basal$module==unique(centrality_basal$module)[i]] ,
                    pvalue=-log10(surv_data_basal_5years_poor$pval[centrality_basal$module==unique(centrality_basal$module)[i]]))
     df$pvalue[which(df$pvalue> -log10(2.2*10^(-16)))]<- -log10(2.2*10^(-16))
     p<-ggplot(df, aes(x=kWithin, y=pvalue))+geom_point()+geom_smooth(method="lm")+theme_bw()+ggtitle(label = unique(centrality_basal$module)[i])+ylab(label = "-log10(p-value)")
+    png(paste("results/2025/DSS5years_basal_",unique(centrality_basal$module)[i],"_poor.png", sep=""), res=300, 1100, 1100)
+     print(p)
+    dev.off()
+    
+    pdf(paste("results/2025/DSS5years_basal_",unique(centrality_basal$module)[i],"_poor.pdf", sep=""), 5,5)
     print(p)
     dev.off()
   }
@@ -182,11 +196,14 @@ surv_data_basal_5years_good$pval[which(surv_data_basal_5years_good$pval==0)]<-2.
 
 for(i in 1:length(unique(centrality_basal$module))){
   if(length(na.omit(-log10(surv_data_basal_5years_good$pval[centrality_basal$module==unique(centrality_basal$module)[i]])))>=10){
-    png(paste("results/2025/DSS5years_basal_",unique(centrality_basal$module)[i],"_good.png", sep=""), res=300, 1100, 1100)
     df<-data.frame(kWithin=centrality_basal$kWithin[centrality_basal$module==unique(centrality_basal$module)[i]] ,
                    pvalue=-log10(surv_data_basal_5years_good$pval[centrality_basal$module==unique(centrality_basal$module)[i]]))
     df$pvalue[which(df$pvalue> -log10(2.2*10^(-16)))]<- -log10(2.2*10^(-16))
     p<-ggplot(df, aes(x=kWithin, y=pvalue))+geom_point()+geom_smooth(method="lm")+theme_bw()+ggtitle(label = unique(centrality_basal$module)[i])+ylab(label = "-log10(p-value)")
+    png(paste("results/2025/DSS5years_basal_",unique(centrality_basal$module)[i],"_good.png", sep=""), res=300, 1100, 1100)
+     print(p)
+    dev.off()
+    pdf(paste("results/2025/DSS5years_basal_",unique(centrality_basal$module)[i],"_good.pdf", sep=""), 5,5)
     print(p)
     dev.off()
   }
@@ -244,3 +261,6 @@ png("results/2025/Correlation_kWithinSurvival_metabric_basal_pheat.png", res=300
 pheatmap(cor_mat[order(rowSums(cbind(cor_mat[,1],-cor_mat[,2]), na.rm=T), decreasing = T),],  cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor, cluster_rows = F, cluster_cols = F)
 dev.off()
 
+pdf("results/2025/Correlation_kWithinSurvival_metabric_basal_pheat.pdf",10,10)
+pheatmap(cor_mat[order(rowSums(cbind(cor_mat[,1],-cor_mat[,2]), na.rm=T), decreasing = T),],  cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor, cluster_rows = F, cluster_cols = F)
+dev.off()

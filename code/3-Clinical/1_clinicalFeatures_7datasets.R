@@ -535,6 +535,9 @@ myColor <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
 png("results/2025/Suvr_7datasets_5years.png", res=500, 4000, 3000)
 pheatmap(pvalue_merge[-which(rownames(pvalue_merge)=="Unconnected"),], cellwidth = 15, cellheight = 15, color = myColor)
 dev.off()
+pdf("results/2025/Suvr_7datasets_5years.pdf", 20, 15)
+pheatmap(pvalue_merge[-which(rownames(pvalue_merge)=="Unconnected"),], cellwidth = 15, cellheight = 15, color = myColor)
+dev.off()
 
 pvalue_good_tot_b[pvalue_good_tot_b<2.2*10^(-16)]<-2.2*10^(-16)
 pvalue_poor_tot_b[pvalue_poor_tot_b<2.2*10^(-16)]<-2.2*10^(-16)
@@ -554,6 +557,9 @@ myColor <- colorRampPalette(c("blue", "white", "red"))(paletteLength)
 
 
 png("results/2025/Suvr_7datasets_5years_b.png", res=500, 4000, 3000)
+pheatmap(pvalue_merge_b[-which(rownames(pvalue_merge_b)=="b_Unconnected"),], cellwidth = 15, cellheight = 15, color = myColor)
+dev.off()
+pdf("results/2025/Suvr_7datasets_5years_b.pdf",  20, 15)
 pheatmap(pvalue_merge_b[-which(rownames(pvalue_merge_b)=="b_Unconnected"),], cellwidth = 15, cellheight = 15, color = myColor)
 dev.off()
 

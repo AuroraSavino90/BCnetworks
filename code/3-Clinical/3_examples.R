@@ -1,3 +1,4 @@
+library(WGCNA)
 #############load network objects and data
 load("data/RData/metabric.RData")
 load("data/RData/meta.RData")
@@ -15,6 +16,14 @@ png("results/2025/modulegrade_e2f.png", res = 300, width=1000, height = 1000)
 boxplot(MEs[,"E2F_TARGETS"]~meta$grade, outline=F, xlab="grade", ylab="Module Eigengene")
 dev.off()
 
+pdf("results/2025/modulegrade_e2f.pdf", width=5, height = 5)
+boxplot(MEs[,"E2F_TARGETS"]~meta$grade, outline=F, xlab="grade", ylab="Module Eigengene")
+dev.off()
+
 png("results/2025/modulegrade_estrogen.png", res = 300, width=1000, height = 1000)
+boxplot(MEs[,"ESTROGEN_RESPONSE_EARLY"]~meta$grade, outline=F, xlab="grade", ylab="Module Eigengene")
+dev.off()
+
+pdf("results/2025/modulegrade_estrogen.pdf", width=5, height =5)
 boxplot(MEs[,"ESTROGEN_RESPONSE_EARLY"]~meta$grade, outline=F, xlab="grade", ylab="Module Eigengene")
 dev.off()

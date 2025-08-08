@@ -86,6 +86,11 @@ png("results/2025/preservation_global_modules_alldatasets.png", res=300, 2500, 2
 pheatmap(log10(pheat), cluster_cols = F,  cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor)
 dev.off()
 
+graphics.off()
+pdf("results/2025/preservation_global_modules_alldatasets.pdf", 7, 10)
+pheatmap(log10(pheat), cluster_cols = F,  cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor)
+dev.off()
+
 ##############################
 #### Figure preservation basal
 ############################
@@ -112,5 +117,10 @@ myBreaks <- c(seq(min(unlist(log10(pheat)), na.rm=T), 0, length.out=ceiling(pale
 
 graphics.off()
 png("results/2025/preservation_basal_modules_alldatasets.png", res=300, 2500, 2000)
+pheatmap(log10(pheat), cluster_cols = F,  cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor)
+dev.off()
+
+graphics.off()
+pdf("results/2025/preservation_basal_modules_alldatasets.pdf", 7, 10)
 pheatmap(log10(pheat), cluster_cols = F,  cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor)
 dev.off()

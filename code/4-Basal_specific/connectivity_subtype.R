@@ -40,7 +40,12 @@ for(i in 1:length(unique(moduleColors_basal))){
   png(paste("results/2025/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_kwithin.png",sep=""), res=300, 1000, 1000)
  print(p)
  dev.off()
+ 
+ pdf(paste("results/2025/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_kwithin.pdf",sep=""), 5,5)
+ print(p)
+ dev.off()
 }
+
 
 ####module eigengenes across subtypes
 
@@ -64,6 +69,9 @@ for(i in 1:length(unique(moduleColors_basal))){
   
   
   png(paste("results/2025/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_ME.png",sep=""), res=300, 1000, 1000)
+  print(p)
+  dev.off()
+  pdf(paste("results/2025/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_ME.pdf",sep=""), 5,5)
   print(p)
   dev.off()
 }
@@ -119,6 +127,9 @@ for(i in 1:length(unique(moduleColors_basal_ic))){
   png(paste("results/2025/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_kwithin_TCGA.png",sep=""), res=300, 1000, 1000)
   print(p)
   dev.off()
+  pdf(paste("results/2025/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_kwithin_TCGA.pdf",sep=""), 5,5)
+  print(p)
+  dev.off()
 }
 
 ####module eigengenes across subtypes
@@ -156,6 +167,9 @@ for(i in 1:length(unique(moduleColors_basal_ic))){
   
   
   png(paste("results/2025/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_ME_TCGA.png",sep=""), res=300, 1000, 1000)
+  print(p)
+  dev.off()
+  pdf(paste("results/2025/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_ME_TCGA.pdf",sep=""), 5,5)
   print(p)
   dev.off()
 }

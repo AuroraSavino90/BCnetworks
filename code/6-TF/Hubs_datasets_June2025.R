@@ -494,6 +494,11 @@ png("results/2025/hubs_datasets_summary_down.png",res=300, 4000,3000)
 pheatmap(-log10(t(mat_adj)), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
 dev.off()
 
+graphics.off()
+pdf("results/2025/hubs_datasets_summary_down.pdf",12,10)
+pheatmap(-log10(t(mat_adj)), cellwidth=15, cellheight=15, keep.dendro=T, annotation_row = anno_p)
+dev.off()
+
 ##########################################
 ############################################
 

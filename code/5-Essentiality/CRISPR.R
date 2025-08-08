@@ -113,3 +113,9 @@ pheatmap((cc[,names(sort(colSums(cc, na.rm=T)))]), cluster_cols = F, cluster_row
 dev.off()
 
 
+graphics.off()
+pdf("results/2025/CRISPR_corr.pdf", 10,10)
+pheatmap((cc[,names(sort(colSums(cc, na.rm=T)))]), cluster_cols = F, cluster_rows = F, cellwidth=15, cellheight=15, breaks=myBreaks, color = myColor, annotation_col = anno_p, annotation_colors = annotation_colors)
+dev.off()
+
+
