@@ -5,75 +5,31 @@ library(WGCNA)
 #####load metabric data
 ####################################
 
-metabric<-read.csv("data/Complete_normalized_expression_data_METABRIC.txt", sep=",", dec=".")
-load("data/Complete_METABRIC_Clinical_Features_Data.rbin")
-meta<-Complete_METABRIC_Clinical_Features_Data
-
-####################################
-### map probes to gene symbols
-####################################
-
-x <- illuminaHumanv3SYMBOL
-# Get the probe identifiers that are mapped to a gene symbol
-mapped_probes <- mappedkeys(x)
-# Convert to a list
-xx <- as.list(x[mapped_probes])
-if(length(xx) > 0) {
-  # Get the SYMBOL for the first five probes
-  xx[1:5]
-  # Get the first one
-  xx[[1]]
-}
-xx <- as.list(x[mapped_probes])
-vals <- sapply(xx, as.vector)
-adf <- data.frame(probe=names(vals), gene=vals)
-
-##if two probes map to the same gene symbol, take the one with the highest average
-
-annotation_sel=adf[match( rownames(metabric), adf[,1]),2]
-annotation_sel<-na.omit(annotation_sel)
-annotation_sel=as.character(annotation_sel)
-
-for(i in 1:length(unique(annotation_sel))){
-  if(length(which(annotation_sel==unique(annotation_sel)[i]))>1){
-    m=which.max(rowMeans(metabric[which(annotation_sel==unique(annotation_sel)[i]),], na.rm=T))
-    metabric=metabric[-which(annotation_sel==unique(annotation_sel)[i])[-m],]
-    annotation_sel=annotation_sel[-which(annotation_sel==unique(annotation_sel)[i])[-m]]
-  }
-}
-
-aned_conv=aned_conv[which(is.na(annotation_sel)==F),]
-annotation_sel=na.omit(annotation_sel)
-which(duplicated(annotation_sel))
-
-
-rownames(metabric)=annotation_sel
-
-save(metabric, file="data/RData/metabric.RData")
-save(meta, file="data/RData/meta.RData")
+load(file="data/RData/metabric.RData")
+load(file="data/RData/meta.RData")
 
 ####################################
 ## compute WGCNA networks
 ####################################
 
-load(file="data/RData/metabric.RData")
-load(file="data/RData/meta.RData")
 
-net_metabric = blockwiseModules(t(metabric),power= 6,TOMType ="unsigned", corType="pearson", networkType = "signed", minModuleSize = 30,reassignThreshold = 0, mergeCutHeight = 0.25,numericLabels = TRUE, pamRespectsDendro = FALSE,saveTOMs = T,
-                               verbose = 3)
+net_metabric = blockwiseModules(t(metabric),power= 6, corType="pearson", networkType = "signed", minModuleSize = 30,reassignThreshold = 0, mergeCutHeight = 0.25,numericLabels = TRUE, pamRespectsDendro = FALSE,saveTOMs = F,
+                                verbose = 3, maxBlockSize = 30000, nThreads=6)
 
-save(net_metabric, "results/2025/net_metabric.RData")
 
-net_metabric_basal = blockwiseModules(t(metabric[,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"]),power= 6,TOMType ="unsigned", corType="pearson", networkType = "signed", minModuleSize = 30,reassignThreshold = 0, mergeCutHeight = 0.25,numericLabels = TRUE, pamRespectsDendro = FALSE,saveTOMs = T,
-                                verbose = 3)
 
-save(net_metabric_basal, "results/2025/net_metabric_basal.RData")
+save(net_metabric, "results/2025/net_metabric_oneblock.RData")
+
+net_metabric_basal = blockwiseModules(t(metabric[,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"]),power= 6,TOMType ="signed", corType="pearson", networkType = "signed", minModuleSize = 30,reassignThreshold = 0, mergeCutHeight = 0.25,numericLabels = TRUE, pamRespectsDendro = FALSE,saveTOMs = F,
+                                      verbose = 3, maxBlockSize = 30000)
+
+save(net_metabric_basal, "results/2025/net_metabric_Basal.RData")
 
 ####################################
 ##compute centrality
 ####################################
-load(file="data/RData/net_metabric_oneblock.RData")
-load(file="data/RData/net_metabric_Basal.RData")
+load(file="results/2025/net_metabric_oneblock.RData")
+load(file="results/2025/net_metabric_Basal.RData")
 
 moduleColors = labels2colors(net_metabric$colors)
 moduleColors_basal = labels2colors(net_metabric_basal$colors)
