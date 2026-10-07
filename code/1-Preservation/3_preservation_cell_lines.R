@@ -3,7 +3,7 @@ library(WGCNA)
 library(ensembldb)
 library(EnsDb.Hsapiens.v75)
 
-#change names in gene symbols  (invariata)
+#change names in gene symbols  (unchanged)
 changenames<-function(data, anno){
   annotation_sel=anno[match( rownames(data), anno[,1]),2]
   
@@ -40,20 +40,20 @@ load(file="data/RData/net_metabric_Basal.RData")
 load(file="results/2025/centrality_global.RData")
 load(file="results/2025/centrality_basal.RData")
 
-## cartella di output separata, per non sovrascrivere i risultati originali
+## separate output folder, so that the original results are not overwritten
 outdir <- "results/2025_fix/"
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 ################################
-## 1. File dei campioni (solo GSM) e annotazione dal series matrix, con match per GSM
+## 1. Sample files (GSM only) and series matrix annotation, matched by GSM
 ################################
-gse_dir <- "data/GSE48213/"     # niente setwd: percorsi espliciti
+gse_dir <- "data/GSE48213/"     # no setwd: explicit paths
 files <- list.files(gse_dir, pattern = "^GSM[0-9]+")
 gsm_files <- sub("^(GSM[0-9]+).*", "\\1", files)
 stopifnot(!anyDuplicated(gsm_files))
 
 meta_lines <- read.csv("data/GSE48213_series_matrix.csv", header = F, stringsAsFactors = FALSE)
-# righe del series matrix individuate dal contenuto, non dalla posizione
+# series matrix rows identified by content, not by position
 row_with <- function(pattern) {
   hit <- sapply(meta_lines, function(col) grepl(pattern, col))
   which(rowSums(hit) >= length(files))
@@ -63,60 +63,60 @@ sub_row <- row_with("^subtype:")
 stopifnot(length(gsm_row) == 1, !is.na(gsm_row), length(sub_row) == 1)
 gsm_meta <- as.character(unlist(meta_lines[gsm_row, ]))
 sub_meta <- as.character(unlist(meta_lines[sub_row, ]))
-is_sample <- grepl("^GSM[0-9]+$", gsm_meta)       # esclude l'eventuale colonna di etichette
+is_sample <- grepl("^GSM[0-9]+$", gsm_meta)       # excludes the row-label column, if present
 line_info <- data.frame(gsm = gsm_meta[is_sample],
                         subtype = sub("^subtype: *", "", sub_meta[is_sample]),
                         stringsAsFactors = FALSE)
-stopifnot(setequal(gsm_files, line_info$gsm))      # stessi campioni nei file e nel series matrix
+stopifnot(setequal(gsm_files, line_info$gsm))      # same samples in the files and in the series matrix
 print(table(line_info$subtype))
 
 ################################
-## 2. Lettura dei file, con controllo che i geni siano nello stesso ordine
+## 2. Read the files, checking that genes are in the same order
 ################################
 x <- NULL
 for(i in seq_along(files)){
   y <- read.csv(file.path(gse_dir, files[i]), row.names = 1, header = T, sep = "\t")
   stopifnot(ncol(y) == 1)
-  if (!is.null(x)) stopifnot(identical(rownames(y), rownames(x)))   # cbind non allinea per rownames
+  if (!is.null(x)) stopifnot(identical(rownames(y), rownames(x)))   # cbind does not align by rownames
   if (is.null(x)) x <- y else x <- cbind(x, y)
 }
 x <- as.matrix(x)
 colnames(x) <- gsm_files
 
 ################################
-## 3. Trasformazione log2
+## 3. log2 transformation
 ################################
 x <- log2(x + 1)
 
 ################################
-## 4. Ensembl gene ID -> gene symbol con EnsDb.Hsapiens.v75 (Ensembl 75, GRCh37; da citare nel Methods)
-##    scelta per la maggiore copertura dei geni dei moduli basal rispetto alla release piu' recente
+## 4. Ensembl gene ID -> gene symbol with EnsDb.Hsapiens.v75 (Ensembl 75, GRCh37; to be cited in the Methods)
+##    chosen for its higher coverage of basal module genes compared with the most recent release
 ################################
 edb <- EnsDb.Hsapiens.v75
 print(ensemblVersion(edb))
-ids <- sub("\\..*$", "", rownames(x))               # rimuove l'eventuale versione dell'ID
+ids <- sub("\\..*$", "", rownames(x))               # removes the ID version suffix, if present
 sym <- mapIds(edb, keys = ids, keytype = "GENEID", column = "SYMBOL")
 anno <- data.frame(ensembl_gene_id = rownames(x), hgnc_symbol = as.character(sym),
                    stringsAsFactors = FALSE)
 sc_data <- changenames(x, anno)
 mod_genes <- rownames(centrality_basal)[centrality_basal$module != "b_Unconnected"]
-print(c(geni_mappati = nrow(sc_data),
+print(c(mapped_genes = nrow(sc_data),
         in_metabric = length(intersect(rownames(sc_data), rownames(metabric))),
-        geni_moduli_basal_presenti = sum(mod_genes %in% rownames(sc_data))))
+        basal_module_genes_present = sum(mod_genes %in% rownames(sc_data))))
 
 ################################
-## 5. Linee basal + claudin-low selezionate per GSM
+## 5. Basal + claudin-low lines selected by GSM
 ################################
-# linee basal e claudin-low (nell'annotazione GSE48213 sono categorie distinte)
+# basal and claudin-low lines (distinct categories in the GSE48213 annotation)
 basal_gsm <- line_info$gsm[line_info$subtype %in% c("Basal", "Claudin-low")]
 sc_data_basal <- sc_data[, colnames(sc_data) %in% basal_gsm]
 print(files[gsm_files %in% basal_gsm])
-# confronto con la selezione dello script originale (per posizione)
+# comparison with the selection of the original script (by position)
 basal_lines_old <- which(meta_lines[11, ] == "subtype: Basal")
-print(list(originale = files[basal_lines_old], corretta = files[gsm_files %in% basal_gsm]))
+print(list(original = files[basal_lines_old], corrected = files[gsm_files %in% basal_gsm]))
 
 ################################
-## 6. Module preservation (stessi parametri di 1_preservation_bulkBC.R)
+## 6. Module preservation (same parameters as in 1_preservation_bulkBC.R)
 ################################
 plot_preservation <- function(mp, file){
   ref = 1
@@ -146,13 +146,13 @@ plot_preservation <- function(mp, file){
 }
 
 run_preservation <- function(ref_expr, ref_modules, test_expr, test_label, file_stub){
-  # rimozione di geni/campioni con troppi NA o varianza nulla in ciascun set (modulePreservation non li rimuove da se')
+  # remove genes/samples with too many missing values or zero variance in each set (modulePreservation does not remove them itself)
   gsg_ref  <- goodSamplesGenes(t(ref_expr),  verbose = 0)
   gsg_test <- goodSamplesGenes(t(test_expr), verbose = 0)
-  message(file_stub, ": rimossi ", sum(!gsg_ref$goodGenes), " geni / ", sum(!gsg_ref$goodSamples), " campioni (riferimento), ",
-          sum(!gsg_test$goodGenes), " geni / ", sum(!gsg_test$goodSamples), " campioni (test)")
+  message(file_stub, ": removed ", sum(!gsg_ref$goodGenes), " genes / ", sum(!gsg_ref$goodSamples), " samples (reference), ",
+          sum(!gsg_test$goodGenes), " genes / ", sum(!gsg_test$goodSamples), " samples (test)")
   ref_expr    <- ref_expr[gsg_ref$goodGenes, gsg_ref$goodSamples]
-  ref_modules <- ref_modules[gsg_ref$goodGenes]      # colori allineati ai geni rimasti
+  ref_modules <- ref_modules[gsg_ref$goodGenes]      # module colors kept aligned with the retained genes
   test_expr   <- test_expr[gsg_test$goodGenes, gsg_test$goodSamples]
   maxSize <- max(table(ref_modules[!ref_modules %in% c("Unconnected", "b_Unconnected")]))
   multiExpr = list(BC = list(data = t(ref_expr)), test = list(data = t(test_expr)))
@@ -174,9 +174,9 @@ run_preservation <- function(ref_expr, ref_modules, test_expr, test_label, file_
   invisible(mp)
 }
 
-## moduli basal, linee basal + claudin-low (nome file invariato per 4_preservation_pheatmap.R)
+## basal modules, basal + claudin-low lines (file name unchanged for 4_preservation_pheatmap.R)
 run_preservation(metabric[, meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"], centrality_basal$module,
                  sc_data_basal, "lines", "lines_basal")
 
-## moduli globali, tutte le linee
+## global modules, all lines
 run_preservation(metabric, centrality_global$module, sc_data, "lines", "lines_global")
