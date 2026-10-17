@@ -81,23 +81,29 @@ perm_test_modules <- function(expr, modules, seed){
   res
 }
 
-modules_global <- setNames(centrality_global$module, rownames(centrality_global))
-
-datasets <- list(
-  PXD002619 = prep_maxquant("data/Mass Spec BC/proteinGroups_PXD002619.txt"),
-  PXD000815 = prep_maxquant("data/Mass Spec BC/proteinGroups_PXD000815.txt"),
-  RPPA_TCGA = prep_rppa("data/Mass Spec BC/RPPA TCGA/TCGA-BRCA-L4.csv"))
-seeds <- c(PXD002619 = 54987656, PXD000815 = 59465496, RPPA_TCGA = 2648696)
-print(sapply(datasets, dim))   # proteins x samples after filtering
-
-results <- lapply(names(datasets), function(nm) {
-  r <- perm_test_modules(datasets[[nm]], modules_global, seeds[nm])
-  r$dataset <- nm
-  r
-})
-results <- do.call(rbind, results)
-write.csv(results, paste0(outdir, "protein_preservation_global_modules.csv"), row.names = FALSE)
-print(results)
+## the permutation tests are run only if their results are not already saved; delete the CSV to recompute
+res_file <- paste0(outdir, "protein_preservation_global_modules.csv")
+if (!file.exists(res_file)) {
+  modules_global <- setNames(centrality_global$module, rownames(centrality_global))
+  
+  datasets <- list(
+    PXD002619 = prep_maxquant("data/Mass Spec BC/proteinGroups_PXD002619.txt"),
+    PXD000815 = prep_maxquant("data/Mass Spec BC/proteinGroups_PXD000815.txt"),
+    RPPA_TCGA = prep_rppa("data/Mass Spec BC/RPPA TCGA/TCGA-BRCA-L4.csv"))
+  seeds <- c(PXD002619 = 54987656, PXD000815 = 59465496, RPPA_TCGA = 2648696)
+  print(sapply(datasets, dim))   # proteins x samples after filtering
+  
+  results <- lapply(names(datasets), function(nm) {
+    r <- perm_test_modules(datasets[[nm]], modules_global, seeds[nm])
+    r$dataset <- nm
+    r
+  })
+  results <- do.call(rbind, results)
+  write.csv(results, res_file, row.names = FALSE)
+  print(results)
+} else {
+  results <- read.csv(res_file, stringsAsFactors = FALSE)
+}
 
 ################################
 ## Heatmap: observed median minus null mean; * FDR < 0.05
@@ -112,11 +118,12 @@ myColor <- colorRampPalette(c("#4575B4", "white", "#D73027"))(paletteLength)
 lim <- max(abs(delta), na.rm = TRUE)
 myBreaks <- seq(-lim, lim, length.out = paletteLength + 1)
 
-png(paste0(outdir, "Protein_preservation_global_modules.png"), res = 300, 1700, 2000)
-pheatmap(delta, cluster_cols = F, cluster_rows = F,   # NAs for untestable modules prevent clustering
-         cellwidth = 15, cellheight = 15, breaks = myBreaks, color = myColor,
-         display_numbers = stars, na_col = "grey90")
-dev.off()
+## png and pdf; pheatmap(filename = ) sizes the output on the cell dimensions
+for (ext in c("png", "pdf"))
+  pheatmap(delta, cluster_cols = F, cluster_rows = F,   # NAs for untestable modules prevent clustering
+           cellwidth = 15, cellheight = 15, breaks = myBreaks, color = myColor,
+           display_numbers = stars, na_col = "grey90",
+           filename = paste0(outdir, "Protein_preservation_global_modules.", ext))
 
 ################################
 ## Heatmap: -log10(empirical p); * FDR < 0.05
@@ -127,7 +134,7 @@ logp  <- -log10(p_mat)
 myColorP  <- colorRampPalette(c("white", "#D73027"))(paletteLength)
 myBreaksP <- seq(0, log10(B + 1), length.out = paletteLength + 1)
 
-png(paste0(outdir, "Protein_preservation_global_modules_log10p.png"), res = 300, 1700, 2000)
-pheatmap(logp, cluster_cols = F, cluster_rows = F, cellwidth = 15, cellheight = 15,
-         breaks = myBreaksP, color = myColorP, display_numbers = stars, na_col = "grey90")
-dev.off()
+for (ext in c("png", "pdf"))
+  pheatmap(logp, cluster_cols = F, cluster_rows = F, cellwidth = 15, cellheight = 15,
+           breaks = myBreaksP, color = myColorP, display_numbers = stars, na_col = "grey90",
+           filename = paste0(outdir, "Protein_preservation_global_modules_log10p.", ext))
