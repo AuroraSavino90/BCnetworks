@@ -9,7 +9,11 @@ load(file="data/RData/net_metabric_Basal.RData")
 load(file="results/2025/centrality_global.RData")
 load(file="results/2025/centrality_basal.RData")
 
-#change names in gene symbols
+## separate output folder, so that the original results are not overwritten
+outdir <- "results/2025_fix/"
+dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
+
+#change names in gene symbols  (unchanged)
 changenames<-function(data, anno){
   annotation_sel=anno[match( rownames(data), anno[,1]),2]
   
@@ -40,25 +44,16 @@ changenames<-function(data, anno){
 }
 
 ################################
-##########NKI
-###############################
-data(nki)
-NKI=exprs(nki)
-annotation=fData(nki)
-metadata=pData(nki)
-
-NKI<-changenames(data=NKI, anno=cbind(annotation[,c(1,7)]))
-
-
-########subtype prediction
+## Duplicated patients across TRANSBIG, UNT, UPP  (unchanged, from the genefu vignette)
+################################
 library("breastCancerMAINZ")
 library("breastCancerTRANSBIG")
 library("breastCancerUPP")
 library("breastCancerUNT")
-library("breastCancerNKI")
+library("breastCancerVDX")
 library(survcomp)
 data(scmod2.robust)
-data(pam50.robust)
+data(pam50.robust)   # required by molecular.subtyping(sbt.model = "pam50"), as in the original script
 
 data(breastCancerData)
 cinfo <- colnames(pData(mainz7g))
@@ -106,592 +101,103 @@ for(i in 1:length(duplid)) {
 }
 names(duplrest) <- duplid
 duplres <- c(duplres, duplrest)
-## Full set duplicated patients
+## Full set duplicated patients (the TRANSBIG copy is kept, the UNT/UPP copies are discarded)
 duPL <- sort(unlist(lapply(duplres, function(x) { return(x[-1]) } )))
 
 
+################################
+## Same procedure for all datasets
+################################
+dn      <- c("transbig", "unt", "upp", "mainz", "nki", "vdx")
+labels  <- c(transbig="TRANSBIG", unt="UNT", upp="UPP", mainz="MAINZ", nki="NKI", vdx="VDX")
+sym_col <- c(transbig=3, unt=3, upp=3, mainz=3, nki=7, vdx=3)   # fData column with gene symbols (as in the original scripts)
 
-
-dn <- c("transbig", "unt", "upp", "mainz", "nki")
-dn.platform <- c("affy", "affy", "affy", "affy", "agilent")
-res <- ddemo.all <- ddemo.coln <- NULL
-for(i in 1:length(dn)) {
-  ## load dataset
-  dd <- get(data(list=dn[i]))
-  #Remove duplicates identified first
-  message("obtained dataset!")
-  #Extract expression set, pData, fData for each dataset
-  ddata <- t(exprs(dd))
-  ddemo <- phenoData(dd)@data
-  if(length(intersect(rownames(ddata),duPL))>0)
-  {
-    ddata<-ddata[-which(rownames(ddata) %in% duPL),]
-    ddemo<-ddemo[-which(rownames(ddemo) %in% duPL),]
-  }
+## load a dataset, remove duplicated patients, assign PAM50, convert probes -> gene symbols
+prepare_dataset <- function(name){
+  dd <- get(data(list=name, envir=environment()))
+  ddata  <- exprs(dd)
   dannot <- featureData(dd)@data
-  # MOLECULAR SUBTYPING
-  # Perform subtyping using scmod2.robust
-  # scmod2.robust: List of parameters defining the subtype clustering model
-  # (as defined by Wirapati et al)
-  # OBSOLETE FUNCTION CALL - OLDER VERSIONS OF GENEFU
-  # SubtypePredictions<-subtype.cluster.predict(sbt.model=scmod2.robust,data=ddata,
-  # annot=dannot,do.mapping=TRUE,verbose=TRUE)
-  # CURRENT FUNCTION CALL - NEWEST VERSION OF GENEFU
-  SubtypePredictions<-molecular.subtyping(sbt.model = "scmod2",data = ddata,
-                                          annot = dannot,do.mapping = TRUE)
-  #Get sample counts pertaining to each subtype
-  table(SubtypePredictions$subtype)
-  #Select samples pertaining to Basal Subtype
-  Basals<-names(which(SubtypePredictions$subtype == "ER-/HER2-"))
-  #Select samples pertaining to HER2 Subtype
-  HER2s<-names(which(SubtypePredictions$subtype == "HER2+"))
-  #Select samples pertaining to Luminal Subtypes
-  LuminalB<-names(which(SubtypePredictions$subtype == "ER+/HER2- High Prolif"))
-  LuminalA<-names(which(SubtypePredictions$subtype == "ER+/HER2- Low Prolif"))
-  #ASSIGN SUBTYPES TO EVERY SAMPLE, ADD TO THE EXISTING PHENODATA
-  ddemo$SCMOD2<-SubtypePredictions$subtype
-  ddemo[LuminalB,]$SCMOD2<-"LumB"
-  ddemo[LuminalA,]$SCMOD2<-"LumA"
-  ddemo[Basals,]$SCMOD2<-"Basal"
-  ddemo[HER2s,]$SCMOD2<-"Her2"
-  # Perform subtyping using PAM50
-  # Matrix should have samples as ROWS, genes as COLUMNS
-  # rownames(dannot)<-dannot$probe<-dannot$EntrezGene.ID
-  # OLDER FUNCTION CALL
-  # PAM50Preds<-intrinsic.cluster.predict(sbt.model=pam50,data=ddata,
-  # annot=dannot,do.mapping=TRUE,verbose=TRUE)
-  # NEWER FUNCTION CALL BASED ON MOST RECENT VERSION
-  PAM50Preds<-molecular.subtyping(sbt.model = "pam50",data=ddata,
-                                  annot=dannot,do.mapping=TRUE)
-  table(PAM50Preds$subtype)
-  ddemo$PAM50<-PAM50Preds$subtype
-  LumA<-names(PAM50Preds$subtype)[which(PAM50Preds$subtype == "LumA")]
-  LumB<-names(PAM50Preds$subtype)[which(PAM50Preds$subtype == "LumB")]
-  ddemo[LumA,]$PAM50<-"LumA"
-  ddemo[LumB,]$PAM50<-"LumB"
-  ddemo.all <- rbind(ddemo, ddemo.all)
+  ddata  <- ddata[, !colnames(ddata) %in% duPL]
+  # PAM50 computed on the whole dataset (duplicates removed), at probe level
+  PAM50Preds <- molecular.subtyping(sbt.model = "pam50", data=t(ddata),
+                                    annot=dannot, do.mapping=TRUE)
+  pam50 <- as.character(PAM50Preds$subtype[colnames(ddata)])
+  message(name, ": gene symbol column = ", colnames(dannot)[sym_col[name]])
+  print(table(pam50, useNA="ifany"))
+  # probe -> gene symbol; for symbols with multiple probes the most expressed probe is kept (as in METABRIC)
+  ddata <- changenames(data=ddata,
+                       anno=data.frame(probe=rownames(ddata),
+                                       symbol=as.character(dannot[rownames(ddata), sym_col[name]])))
+  list(expr=ddata, pam50=pam50)
 }
-## obtained dat
-##########
 
-#gs<-goodSamplesGenes(t(NKI))
-#NKI<-NKI[gs$goodGenes,]
-#gs<-goodSamplesGenes(remaining_data)
-
-setLabels = c("BC", "NKI");
-multiExpr = list(BC = list(data = t(metabric)), NKI = list(data = t(NKI)));
-multiColor = list(BC = centrality_global$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsNKI_global.RData");
-
-
-
-pdf("results/2025/preservation_metabricVsNKI.pdf")
-ref = 1
-test = 2
-statsObs = cbind(mp$quality$observed[[ref]][[test]][, -1], mp$preservation$observed[[ref]][[test]][, -1])
-statsZ = cbind(mp$quality$Z[[ref]][[test]][, -1], mp$preservation$Z[[ref]][[test]][, -1]);
-# Compare preservation to quality:
-print( cbind(statsObs[, c("medianRank.pres", "medianRank.qual")],
-             signif(statsZ[, c("Zsummary.pres", "Zsummary.qual")], 2)) )
-
-# Module labels and module sizes are also contained in the results
-modColors = rep("grey", 20)
-moduleSizes = mp$preservation$Z[[ref]][[test]][, 1];
-# leave grey and gold modules out
-plotMods = !(modColors %in% c("Unconnected", "gold"));
-# Text labels for points
-text = rownames(mp$preservation$observed$ref.BC$inColumnsAlsoPresentIn.NKI);
-# Auxiliary convenience variable
-plotData = cbind(mp$preservation$observed[[ref]][[test]][, 2], mp$preservation$Z[[ref]][[test]][, 2])
-# Main titles for the plot
-mains = c("Preservation Median rank", "Preservation Zsummary");
-# Start the plot
-p<-2
-min = min(plotData[, p], na.rm = TRUE);
-max = max(plotData[, p], na.rm = TRUE);
-# Adjust ploting ranges appropriately
-if (p==2)
-{
+## diagnostic plot of Zsummary vs module size (gold and Unconnected excluded)
+plot_preservation <- function(mp, file){
+  ref = 1
+  test = 2
+  statsObs = cbind(mp$quality$observed[[ref]][[test]][, -1], mp$preservation$observed[[ref]][[test]][, -1])
+  statsZ = cbind(mp$quality$Z[[ref]][[test]][, -1], mp$preservation$Z[[ref]][[test]][, -1])
+  print( cbind(statsObs[, c("medianRank.pres", "medianRank.qual")],
+               signif(statsZ[, c("Zsummary.pres", "Zsummary.qual")], 2)) )
+  Z <- mp$preservation$Z[[ref]][[test]]
+  plotMods <- !(rownames(Z) %in% c("gold", "Unconnected", "b_Unconnected"))
+  moduleSizes <- Z[plotMods, "moduleSize"]
+  zs <- Z[plotMods, "Zsummary.pres"]
+  min = min(zs, na.rm = TRUE)
+  max = max(zs, na.rm = TRUE)
   if (min > -max/10) min = -max/10
   ylim = c(min - 0.1 * (max-min), max + 0.1 * (max-min))
-} else
-  ylim = c(max + 0.1 * (max-min), min - 0.1 * (max-min))
-plot(moduleSizes[plotMods], plotData[plotMods, p], col = 1, bg = modColors[plotMods], pch = 21,
-     main = mains[p],
-     cex = 2.4,
-     ylab = mains[p], xlab = "Module size", log = "x",
-     ylim = ylim,
-     xlim = c(10, 2000), cex.lab = 1.2, cex.axis = 1.2, cex.main =1.4)
-labelPoints(moduleSizes[plotMods], plotData[plotMods, p], text, cex = 1, offs = 0.08);
-# For Zsummary, add threshold lines
-if (p==2)
-{
+  pdf(file)
+  plot(moduleSizes, zs, col = 1, bg = "grey", pch = 21,
+       main = "Preservation Zsummary", cex = 2.4,
+       ylab = "Preservation Zsummary", xlab = "Module size", log = "x",
+       ylim = ylim, cex.lab = 1.2, cex.axis = 1.2, cex.main = 1.4)
+  labelPoints(moduleSizes, zs, rownames(Z)[plotMods], cex = 1, offs = 0.08)
   abline(h=0)
   abline(h=2, col = "blue", lty = 2)
   abline(h=10, col = "darkgreen", lty = 2)
-  
+  dev.off()
 }
-# If plotting into a file, close it
-dev.off()
 
-
-
-#################preservation in basal
-NKI_basal<-NKI[,ddemo.all[colnames(NKI),"PAM50"]=="Basal"]
-
-setLabels = c("BC", "NKI");
-multiExpr = list(BC = list(data = t(metabric[,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"])), NKI = list(data = t(NKI_basal)));
-multiColor = list(BC = centrality_basal$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsNKI_basal.RData");
-
-
-
-pdf("results/2025/preservation_metabricVsNKI_basal.pdf")
-ref = 1
-test = 2
-statsObs = cbind(mp$quality$observed[[ref]][[test]][, -1], mp$preservation$observed[[ref]][[test]][, -1])
-statsZ = cbind(mp$quality$Z[[ref]][[test]][, -1], mp$preservation$Z[[ref]][[test]][, -1]);
-# Compare preservation to quality:
-print( cbind(statsObs[, c("medianRank.pres", "medianRank.qual")],
-             signif(statsZ[, c("Zsummary.pres", "Zsummary.qual")], 2)) )
-
-# Module labels and module sizes are also contained in the results
-modColors = rep("grey", 20)
-moduleSizes = mp$preservation$Z[[ref]][[test]][, 1];
-# leave grey and gold modules out
-plotMods = !(modColors %in% c("Unconnected", "gold"));
-# Text labels for points
-text = rownames(mp$preservation$observed$ref.BC$inColumnsAlsoPresentIn.NKI);
-# Auxiliary convenience variable
-plotData = cbind(mp$preservation$observed[[ref]][[test]][, 2], mp$preservation$Z[[ref]][[test]][, 2])
-# Main titles for the plot
-mains = c("Preservation Median rank", "Preservation Zsummary");
-# Start the plot
-p<-2
-min = min(plotData[, p], na.rm = TRUE);
-max = max(plotData[, p], na.rm = TRUE);
-# Adjust ploting ranges appropriately
-if (p==2)
-{
-  if (min > -max/10) min = -max/10
-  ylim = c(min - 0.1 * (max-min), max + 0.1 * (max-min))
-} else
-  ylim = c(max + 0.1 * (max-min), min - 0.1 * (max-min))
-plot(moduleSizes[plotMods], plotData[plotMods, p], col = 1, bg = modColors[plotMods], pch = 21,
-     main = mains[p],
-     cex = 2.4,
-     ylab = mains[p], xlab = "Module size", log = "x",
-     ylim = ylim,
-     xlim = c(10, 2000), cex.lab = 1.2, cex.axis = 1.2, cex.main =1.4)
-labelPoints(moduleSizes[plotMods], plotData[plotMods, p], text, cex = 1, offs = 0.08);
-# For Zsummary, add threshold lines
-if (p==2)
-{
-  abline(h=0)
-  abline(h=2, col = "blue", lty = 2)
-  abline(h=10, col = "darkgreen", lty = 2)
-  
+## module preservation with the same parameters for all datasets
+run_preservation <- function(ref_expr, ref_modules, test_expr, test_label, file_stub){
+  # remove genes/samples with too many missing values or zero variance in each set (modulePreservation does not remove them itself)
+  gsg_ref  <- goodSamplesGenes(t(ref_expr),  verbose = 0)
+  gsg_test <- goodSamplesGenes(t(test_expr), verbose = 0)
+  message(file_stub, ": removed ", sum(!gsg_ref$goodGenes), " genes / ", sum(!gsg_ref$goodSamples), " samples (reference), ",
+          sum(!gsg_test$goodGenes), " genes / ", sum(!gsg_test$goodSamples), " samples (test)")
+  ref_expr    <- ref_expr[gsg_ref$goodGenes, gsg_ref$goodSamples]
+  ref_modules <- ref_modules[gsg_ref$goodGenes]      # module colors kept aligned with the retained genes
+  test_expr   <- test_expr[gsg_test$goodGenes, gsg_test$goodSamples]
+  # no subsampling of modules: maxModuleSize = size of the largest module (Unconnected excluded)
+  maxSize <- max(table(ref_modules[!ref_modules %in% c("Unconnected", "b_Unconnected")]))
+  multiExpr = list(BC = list(data = t(ref_expr)), test = list(data = t(test_expr)))
+  names(multiExpr)[2] <- test_label
+  multiColor = list(BC = ref_modules)
+  print(system.time( {
+    mp = modulePreservation(multiExpr, multiColor,
+                            referenceNetworks = 1,
+                            networkType = "signed",     # as in the reference networks
+                            maxModuleSize = maxSize,
+                            nPermutations = 200,
+                            randomSeed = 1,
+                            quickCor = 0,
+                            verbose = 3,
+                            checkData = TRUE)           # check only: problematic genes/samples have already been removed
+  } ))
+  save(mp, file = paste0(outdir, "modulePreservation_metabricVs", file_stub, ".RData"))
+  plot_preservation(mp, paste0(outdir, "preservation_metabricVs", file_stub, ".pdf"))
+  invisible(mp)
 }
-# If plotting into a file, close it
-dev.off()
 
-
-############preservation in other datasets
-dn <- c("transbig", "unt", "upp", "mainz", "nki")
-dn.platform <- c("affy", "affy", "affy", "affy", "agilent")
-
-i<-1
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-rownames(ddata)<-dannot[rownames(ddata),3]
-
-setLabels = c("BC", "TRANSBIG");
-multiExpr = list(BC = list(data = t(metabric)), TRANSBIG = list(data = t(ddata)));
-multiColor = list(BC = centrality_global$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsTRANSBIG.RData");
-
-
-
-i<-2
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-rownames(ddata)<-dannot[rownames(ddata),3]
-
-setLabels = c("BC", "UNT");
-multiExpr = list(BC = list(data = t(metabric)), UNT = list(data = t(ddata)));
-multiColor = list(BC = centrality_global$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsUNT.RData");
-
-
-
-
-
-i<-3
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-rownames(ddata)<-dannot[rownames(ddata),3]
-
-setLabels = c("BC", "UPP");
-multiExpr = list(BC = list(data = t(metabric)), UPP = list(data = t(ddata)));
-multiColor = list(BC = centrality_global$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsUPP.RData");
-
-
-i<-4
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-rownames(ddata)<-dannot[rownames(ddata),3]
-
-setLabels = c("BC", "MAINZ");
-multiExpr = list(BC = list(data = t(metabric)), MAINZ = list(data = t(ddata)));
-multiColor = list(BC = centrality_global$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsMAINZ.RData");
-
-
-library("breastCancerVDX")
-
-
-dn <- c("transbig", "unt", "upp", "mainz", "nki", "vdx")
-dn.platform <- c("affy", "affy", "affy", "affy", "agilent", "affy")
-
-i<-6
-
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-rownames(ddata)<-dannot[rownames(ddata),3]
-
-setLabels = c("BC", "VDX");
-multiExpr = list(BC = list(data = t(metabric)), VDX = list(data = t(ddata)));
-multiColor = list(BC = centrality_global$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsVDX.RData");
-
-
-
-
-########################################
-######### Basal
-######################################
-metabric_basal<-metabric[,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"]
-
-##Basal
-i<-1
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-## load dataset
-ddemo <- phenoData(dd)@data
-# Perform subtyping using PAM50
-# Matrix should have samples as ROWS, genes as COLUMNS
-# rownames(dannot)<-dannot$probe<-dannot$EntrezGene.ID
-# OLDER FUNCTION CALL
-# PAM50Preds<-intrinsic.cluster.predict(sbt.model=pam50,data=ddata,
-# annot=dannot,do.mapping=TRUE,verbose=TRUE)
-# NEWER FUNCTION CALL BASED ON MOST RECENT VERSION
-PAM50Preds<-molecular.subtyping(sbt.model = "pam50",data=t(ddata),
-                                annot=dannot,do.mapping=TRUE)
-table(PAM50Preds$subtype)
-ddemo$PAM50<-PAM50Preds$subtype
-
-rownames(ddata)<-dannot[rownames(ddata),3]
-
-ddata<-ddata[,ddemo$PAM50=="Basal"]
-
-setLabels = c("BC", "TRANSBIG");
-multiExpr = list(BC = list(data = t(metabric_basal)), TRANSBIG = list(data = t(ddata)));
-multiColor = list(BC = centrality_basal$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsTRANSBIG_basal.RData");
-
-
-i<-2
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-## load dataset
-ddemo <- phenoData(dd)@data
-# Perform subtyping using PAM50
-# Matrix should have samples as ROWS, genes as COLUMNS
-# rownames(dannot)<-dannot$probe<-dannot$EntrezGene.ID
-# OLDER FUNCTION CALL
-# PAM50Preds<-intrinsic.cluster.predict(sbt.model=pam50,data=ddata,
-# annot=dannot,do.mapping=TRUE,verbose=TRUE)
-# NEWER FUNCTION CALL BASED ON MOST RECENT VERSION
-PAM50Preds<-molecular.subtyping(sbt.model = "pam50",data=t(ddata),
-                                annot=dannot,do.mapping=TRUE)
-table(PAM50Preds$subtype)
-ddemo$PAM50<-PAM50Preds$subtype
-
-rownames(ddata)<-dannot[rownames(ddata),3]
-
-ddata<-ddata[,ddemo$PAM50=="Basal"]
-
-setLabels = c("BC", "UNT");
-multiExpr = list(BC = list(data = t(metabric_basal)), UNT = list(data = t(ddata)));
-multiColor = list(BC = centrality_basal$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsUNT_basal.RData");
-
-
-
-i<-3
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-## load dataset
-ddemo <- phenoData(dd)@data
-# Perform subtyping using PAM50
-# Matrix should have samples as ROWS, genes as COLUMNS
-# rownames(dannot)<-dannot$probe<-dannot$EntrezGene.ID
-# OLDER FUNCTION CALL
-# PAM50Preds<-intrinsic.cluster.predict(sbt.model=pam50,data=ddata,
-# annot=dannot,do.mapping=TRUE,verbose=TRUE)
-# NEWER FUNCTION CALL BASED ON MOST RECENT VERSION
-PAM50Preds<-molecular.subtyping(sbt.model = "pam50",data=t(ddata),
-                                annot=dannot,do.mapping=TRUE)
-table(PAM50Preds$subtype)
-ddemo$PAM50<-PAM50Preds$subtype
-
-rownames(ddata)<-dannot[rownames(ddata),3]
-
-ddata<-ddata[,ddemo$PAM50=="Basal"]
-
-setLabels = c("BC", "UPP");
-multiExpr = list(BC = list(data = t(metabric_basal)), UPP = list(data = t(ddata)));
-multiColor = list(BC = centrality_basal$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsUPP_basal.RData");
-
-
-i<-4
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-## load dataset
-ddemo <- phenoData(dd)@data
-# Perform subtyping using PAM50
-# Matrix should have samples as ROWS, genes as COLUMNS
-# rownames(dannot)<-dannot$probe<-dannot$EntrezGene.ID
-# OLDER FUNCTION CALL
-# PAM50Preds<-intrinsic.cluster.predict(sbt.model=pam50,data=ddata,
-# annot=dannot,do.mapping=TRUE,verbose=TRUE)
-# NEWER FUNCTION CALL BASED ON MOST RECENT VERSION
-PAM50Preds<-molecular.subtyping(sbt.model = "pam50",data=t(ddata),
-                                annot=dannot,do.mapping=TRUE)
-table(PAM50Preds$subtype)
-ddemo$PAM50<-PAM50Preds$subtype
-
-rownames(ddata)<-dannot[rownames(ddata),3]
-
-ddata<-ddata[,ddemo$PAM50=="Basal"]
-
-setLabels = c("BC", "MAINZ");
-multiExpr = list(BC = list(data = t(metabric_basal)), MAINZ = list(data = t(ddata)));
-multiColor = list(BC = centrality_basal$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-# Save the results
-save(mp, file = "results/2025/modulePreservation_metabricVsMAINZ_basal.RData");
-
-
-library("breastCancerVDX")
-
-
-dn <- c("transbig", "unt", "upp", "mainz", "nki", "vdx")
-dn.platform <- c("affy", "affy", "affy", "affy", "agilent", "affy")
-
-i<-6
-
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-## load dataset
-ddemo <- phenoData(dd)@data
-# Perform subtyping using PAM50
-# Matrix should have samples as ROWS, genes as COLUMNS
-# rownames(dannot)<-dannot$probe<-dannot$EntrezGene.ID
-# OLDER FUNCTION CALL
-# PAM50Preds<-intrinsic.cluster.predict(sbt.model=pam50,data=ddata,
-# annot=dannot,do.mapping=TRUE,verbose=TRUE)
-# NEWER FUNCTION CALL BASED ON MOST RECENT VERSION
-PAM50Preds<-molecular.subtyping(sbt.model = "pam50",data=t(ddata),
-                                annot=dannot,do.mapping=TRUE)
-table(PAM50Preds$subtype)
-ddemo$PAM50<-PAM50Preds$subtype
-
-rownames(ddata)<-dannot[rownames(ddata),3]
-
-ddata<-ddata[,ddemo$PAM50=="Basal"]
-
-setLabels = c("BC", "VDX");
-multiExpr = list(BC = list(data = t(metabric_basal)), VDX = list(data = t(ddata)));
-multiColor = list(BC = centrality_basal$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-save(mp, file = "results/2025/modulePreservation_metabricVsVDX_basal.RData");
-
-
-
-i<-5
-
-dd <- get(data(list=dn[i]))
-#Extract expression set, pData, fData for each dataset
-ddata <- (exprs(dd))
-dannot <- featureData(dd)@data
-## load dataset
-ddemo <- phenoData(dd)@data
-# Perform subtyping using PAM50
-# Matrix should have samples as ROWS, genes as COLUMNS
-# rownames(dannot)<-dannot$probe<-dannot$EntrezGene.ID
-# OLDER FUNCTION CALL
-# PAM50Preds<-intrinsic.cluster.predict(sbt.model=pam50,data=ddata,
-# annot=dannot,do.mapping=TRUE,verbose=TRUE)
-# NEWER FUNCTION CALL BASED ON MOST RECENT VERSION
-PAM50Preds<-molecular.subtyping(sbt.model = "pam50",data=t(ddata),
-                                annot=dannot,do.mapping=TRUE)
-table(PAM50Preds$subtype)
-ddemo$PAM50<-PAM50Preds$subtype
-
-rownames(ddata)<-dannot[rownames(ddata),7]
-
-ddata<-ddata[,ddemo$PAM50=="Basal"]
-
-setLabels = c("BC", "NKI");
-multiExpr = list(BC = list(data = t(metabric_basal)), NKI = list(data = t(ddata)));
-multiColor = list(BC = centrality_basal$module )
-system.time( {
-  mp = modulePreservation(multiExpr, multiColor,
-                          referenceNetworks = 1,
-                          nPermutations = 200,
-                          randomSeed = 1,
-                          quickCor = 0,
-                          verbose = 3,
-                          checkData=F)
-} );
-save(mp, file = "results/2025/modulePreservation_metabricVsNKI_basal2.RData")
-
+metabric_basal <- metabric[, meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"]
+
+for(name in dn){
+  d <- prepare_dataset(name)
+  # global modules, all samples (NKI file name as in the original, read by 4_preservation_pheatmap.R)
+  stub_global <- ifelse(name == "nki", "NKI_global", labels[name])
+  run_preservation(metabric, centrality_global$module, d$expr, labels[name], stub_global)
+  # basal modules, PAM50 basal samples only
+  run_preservation(metabric_basal, centrality_basal$module,
+                   d$expr[, which(d$pam50 == "Basal")], labels[name], paste0(labels[name], "_basal"))
+}
