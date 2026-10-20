@@ -1,12 +1,17 @@
 library(WGCNA)
 library(survival)
 library(survminer)
+dir.create("results/2025_fix", showWarnings=F)
 
 load(file="data/RData/metabric.RData")
 load(file="data/RData/meta.RData")
 load(file="data/Complete_METABRIC_Clinical_Survival_Data__DSS.rbin")
 load(file="results/2025/centrality_global.RData")
 load(file="results/2025/centrality_basal.RData")
+#check sample and gene order (module colors are matched by position)
+stopifnot(identical(rownames(meta), colnames(metabric)))
+stopifnot(identical(rownames(centrality_global), rownames(metabric)))
+stopifnot(identical(rownames(centrality_basal), rownames(metabric)))
 
 #############compute module eigengenes
 
@@ -22,20 +27,20 @@ for(i in 1:ncol(MEs)){
   module<-gsub("ME", "", colnames(MEs)[i])
   c=cbind(a,b)
   
-  eigen_class<-cut(MEs[,i], breaks=quantile(MEs[,i],probs=c(0,1,0.5), na.rm=T))
+  eigen_class<-cut(MEs[,i], breaks=quantile(MEs[,i],probs=c(0,1,0.5), na.rm=T), include.lowest=T)
   
   fit<-survfit(Surv(OS,IND)~eigen_class, data=c)
   ggsurv <- ggsurvplot(fit, data=c, risk.table=F, pval=T, palette=c("blue", "red"),legend.labs=c(paste("low", module, collapse=" "), paste("high",module, collapse=" ")), censor=F, tables.theme = clean_theme())
-  png(paste("results/2025/survival_metabric_DSS_",module,".png", collapse=""), res=300, 1500, 1500)
+  png(paste("results/2025_fix/survival_metabric_DSS_",module,".png", sep=""), res=300, 1500, 1500)
   ggsurv$plot <- ggsurv$plot +
     theme(legend.text = element_text(size = 10))
-  print(ggsurv)
+  print(ggsurv, newpage = FALSE)
   dev.off()
   
-  pdf(paste("results/2025/survival_metabric_DSS_",module,".pdf", collapse=""), 5, 5)
+  pdf(paste("results/2025_fix/survival_metabric_DSS_",module,".pdf", sep=""), 5, 5)
   ggsurv$plot <- ggsurv$plot +
     theme(legend.text = element_text(size = 10))
-  print(ggsurv)
+  print(ggsurv, newpage = FALSE)
   dev.off()
   
 }
@@ -52,20 +57,20 @@ for(i in 1:ncol(MEs)){
   module<-gsub("ME", "", colnames(MEs)[i])
   c=cbind(a,b)
   
-  eigen_class<-cut(MEs[,i], breaks=quantile(MEs[,i],probs=c(0,1,0.5), na.rm=T))
+  eigen_class<-cut(MEs[,i], breaks=quantile(MEs[,i],probs=c(0,1,0.5), na.rm=T), include.lowest=T)
   
   fit<-survfit(Surv(OS,IND)~eigen_class, data=c)
   ggsurv <- ggsurvplot(fit, data=c, risk.table=F, pval=T, palette=c("blue", "red"),legend.labs=c("low ME", "high ME"), censor=F, tables.theme = clean_theme(), ylim=c(0.6, 1))
-  png(paste("results/2025/survival_metabric_DSS_",module,"_5years.png", collapse=""), res=300, 1000, 1000)
+  png(paste("results/2025_fix/survival_metabric_DSS_",module,"_5years.png", sep=""), res=300, 1000, 1000)
   ggsurv$plot <- ggsurv$plot +
     theme(legend.text = element_text(size = 10))
-  print(ggsurv)
+  print(ggsurv, newpage = FALSE)
   dev.off()
   
-  pdf(paste("results/2025/survival_metabric_DSS_",module,"_5years.pdf", collapse=""), 5, 5)
+  pdf(paste("results/2025_fix/survival_metabric_DSS_",module,"_5years.pdf", sep=""), 5, 5)
   ggsurv$plot <- ggsurv$plot +
     theme(legend.text = element_text(size = 10))
-  print(ggsurv)
+  print(ggsurv, newpage = FALSE)
   dev.off()
   
 }
@@ -82,20 +87,20 @@ for(i in 1:ncol(MEs_basal)){
   module<-gsub("ME", "", colnames(MEs_basal)[i])
   c=cbind(a,b)
   
-  eigen_class<-cut(MEs_basal[meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal",i], breaks=quantile(MEs_basal[,i],probs=c(0,1,0.5), na.rm=T))
+  eigen_class<-cut(MEs_basal[,i], breaks=quantile(MEs_basal[,i],probs=c(0,1,0.5), na.rm=T), include.lowest=T)
   
   fit<-survfit(Surv(OS,IND)~eigen_class, data=c)
   ggsurv <- ggsurvplot(fit, data=c, risk.table=F, pval=T, palette=c("blue", "red"),legend.labs=c(paste("low", module, collapse=" "), paste("high",module, collapse=" ")), censor=F, tables.theme = clean_theme())
-  png(paste("results/2025/survival_metabric_DSS_basal_",module,".png", collapse=""), res=300, 1500, 1500)
+  png(paste("results/2025_fix/survival_metabric_DSS_basal_",module,".png", sep=""), res=300, 1500, 1500)
   ggsurv$plot <- ggsurv$plot +
     theme(legend.text = element_text(size = 10))
-  print(ggsurv)
+  print(ggsurv, newpage = FALSE)
   dev.off()
   
-  pdf(paste("results/2025/survival_metabric_DSS_basal_",module,".pdf", collapse=""),  5, 5)
+  pdf(paste("results/2025_fix/survival_metabric_DSS_basal_",module,".pdf", sep=""),  5, 5)
   ggsurv$plot <- ggsurv$plot +
     theme(legend.text = element_text(size = 10))
-  print(ggsurv)
+  print(ggsurv, newpage = FALSE)
   dev.off()
   
 }
@@ -112,25 +117,24 @@ for(i in 1:ncol(MEs_basal)){
   module<-gsub("ME", "", colnames(MEs_basal)[i])
   c=cbind(a,b)
   
-  eigen_class<-cut(MEs_basal[,i], breaks=quantile(MEs_basal[,i],probs=c(0,1,0.5), na.rm=T))
+  eigen_class<-cut(MEs_basal[,i], breaks=quantile(MEs_basal[,i],probs=c(0,1,0.5), na.rm=T), include.lowest=T)
   
   pp<-survdiff(Surv(OS,IND)~eigen_class, data=c)
-  pval<-c(pval, 1-pchisq(pp$chisq, length(pp$n)-1))
+  pval<-c(pval, pchisq(pp$chisq, length(pp$n)-1, lower.tail=F))
   
   fit<-survfit(Surv(OS,IND)~eigen_class, data=c)
   ggsurv <- ggsurvplot(fit, data=c, risk.table=F, pval=T, palette=c("blue", "red"),legend.labs=c("low ME", "high ME"), censor=F, tables.theme = clean_theme(), ylim=c(0.6, 1))
-  png(paste("results/2025/survival_metabric_DSS_basal_",module,"_5years.png", collapse=""), res=300, 1000, 1000)
+  png(paste("results/2025_fix/survival_metabric_DSS_basal_",module,"_5years.png", sep=""), res=300, 1000, 1000)
   ggsurv$plot <- ggsurv$plot +
     theme(legend.text = element_text(size = 10))
-  print(ggsurv)
+  print(ggsurv, newpage = FALSE)
   dev.off()
   
-  pdf(paste("results/2025/survival_metabric_DSS_basal_",module,"_5years.pdf", collapse=""), 5, 5)
+  pdf(paste("results/2025_fix/survival_metabric_DSS_basal_",module,"_5years.pdf", sep=""), 5, 5)
   ggsurv$plot <- ggsurv$plot +
     theme(legend.text = element_text(size = 10))
-  print(ggsurv)
+  print(ggsurv, newpage = FALSE)
   dev.off()
   
 }
 names(pval)<-colnames(MEs_basal)
-
