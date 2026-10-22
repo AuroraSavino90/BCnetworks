@@ -1,48 +1,49 @@
 library(WGCNA)
+dir.create("results/2025_fix", showWarnings=FALSE)
 
 #load pre-computed moduletrait relationships
 
-load("results/2025/moduleTraitPvalue_METABRIC.RData")
+load("results/2025_fix/moduleTraitPvalue_METABRIC.RData")
 mtPval_metabric<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_MAINZ.RData")
+load("results/2025_fix/moduleTraitPvalue_MAINZ.RData")
 mtPval_Mainz<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_UNT.RData")
+load("results/2025_fix/moduleTraitPvalue_UNT.RData")
 mtPval_Unt<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_UPP.RData")
+load("results/2025_fix/moduleTraitPvalue_UPP.RData")
 mtPval_Upp<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_TRANSBIG.RData")
+load("results/2025_fix/moduleTraitPvalue_TRANSBIG.RData")
 mtPval_Transbig<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_VDX.RData")
+load("results/2025_fix/moduleTraitPvalue_VDX.RData")
 mtPval_Vdx<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_NKI.RData")
+load("results/2025_fix/moduleTraitPvalue_NKI.RData")
 mtPval_NKI<-moduleTraitPvalue_tot
 
 
-load("results/2025/moduleTraitCor_METABRIC.RData")
+load("results/2025_fix/moduleTraitCor_METABRIC.RData")
 mtCor_metabric<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_MAINZ.RData")
+load("results/2025_fix/moduleTraitCor_MAINZ.RData")
 mtCor_Mainz<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_UNT.RData")
+load("results/2025_fix/moduleTraitCor_UNT.RData")
 mtCor_Unt<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_UPP.RData")
+load("results/2025_fix/moduleTraitCor_UPP.RData")
 mtCor_Upp<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_TRANSBIG.RData")
+load("results/2025_fix/moduleTraitCor_TRANSBIG.RData")
 mtCor_Transbig<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_VDX.RData")
+load("results/2025_fix/moduleTraitCor_VDX.RData")
 mtCor_Vdx<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_NKI.RData")
+load("results/2025_fix/moduleTraitCor_NKI.RData")
 mtCor_NKI<-moduleTraitCor_tot
 
 moduleTraitCor_tot<-cbind(mtCor_NKI,mtCor_Transbig,mtCor_Unt,mtCor_Upp,mtCor_Mainz,mtCor_Vdx)
@@ -86,7 +87,7 @@ names(pmerged_lg)<-rownames(moduleTraitPvalue_tot_grade)
 gradeavg<-rowMeans(moduleTraitCor_tot_grade)
 
 
-pdf("results/2025/ModuleGradeRelationship_alldatasets.pdf", width=7, height = 7)
+pdf("results/2025_fix/ModuleGradeRelationship_alldatasets.pdf", width=7, height = 7)
 textMatrix = paste(signif(moduleTraitCor_tot_grade, 2), "\n(",
                    signif(moduleTraitPvalue_tot_grade, 1), ")", sep = "");
 
@@ -134,15 +135,15 @@ names(pmerged_la)<-rownames(moduleTraitPvalue_tot_age)
 
 ageavg<-rowMeans(moduleTraitCor_tot_age)
 
-pdf("results/2025/ModuleAgeRelationship_alldatasets.pdf", 7,7)
+pdf("results/2025_fix/ModuleAgeRelationship_alldatasets.pdf", 7,7)
 
 textMatrix = paste(signif(moduleTraitCor_tot_age, 2), "\n(",
                    signif(moduleTraitPvalue_tot_age, 1), ")", sep = "");
 
 textMatrix[moduleTraitPvalue_tot_age<2.2*10^(-16)]<-paste(signif(moduleTraitCor_tot_age[moduleTraitPvalue_tot_age<2.2*10^(-16)], 2), "\n(",
-                                                            
-                                                            
-                                                            "<2.2e-16)", sep = "");
+                                                          
+                                                          
+                                                          "<2.2e-16)", sep = "");
 dim(textMatrix) = dim(moduleTraitCor_tot_age)
 par(mar = c(6, 14, 3, 2.2));
 labeledHeatmap(Matrix = moduleTraitCor_tot_age,
@@ -161,7 +162,7 @@ labeledHeatmap(Matrix = moduleTraitCor_tot_age,
 dev.off();
 
 #####survival
-load(file="results/2025/pvalue_merge_surv_global.RData")
+load(file="results/2025_fix/pvalue_merge_surv_global.RData")
 
 
 
@@ -190,63 +191,107 @@ for(row in 1:nrow(pvalue_merge)){
 names(pmerged_hs)<-rownames(pvalue_merge)
 pmerged_hs<- pmerged_hs[-which(names(pmerged_hs)=="Unconnected")]
 
+# Fisher (metap::sumlog) and Stouffer (metap::sumz) combinations, all cohorts and external only
+combine_directional <- function(p, effect) {
+  ok <- is.finite(p) & is.finite(effect)
+  if (sum(ok) < 2) return(c(k = sum(ok), p_fisher = NA, p_stouffer = NA))
+  p1 <- two2one(p[ok], two = rep(TRUE, sum(ok)), invert = effect[ok] < 0)
+  c(k = sum(ok), p_fisher = sumlog(p1)$p, p_stouffer = sumz(p1)$p)
+}
+
+# p, effect: modules x datasets; effect > 0 = tested direction.
+combine_matrix <- function(p, effect, test, discovery_col = 1) {
+  out <- list()
+  for (cohort_set in c("all_cohorts", "external_only")) {
+    cols <- if (cohort_set == "all_cohorts") seq_len(ncol(p)) else setdiff(seq_len(ncol(p)), discovery_col)
+    res <- t(sapply(rownames(p), function(m) combine_directional(p[m, cols], effect[m, cols])))
+    df <- data.frame(module = rownames(p), test = test, cohort_set = cohort_set, res, row.names = NULL)
+    df$fdr_fisher <- p.adjust(df$p_fisher, method = "BH")
+    df$fdr_stouffer <- p.adjust(df$p_stouffer, method = "BH")
+    out[[cohort_set]] <- df
+  }
+  do.call(rbind, out)
+}
+
+# Inputs as built in 2_pheatmap_clinical.R:
+#   grade_p/grade_r, age_p/age_r: modules x datasets, METABRIC in column 1;
+#   surv_signed: pvalue_merge(_b), signed -log10 p (> 0 = good prognosis),
+#   METABRIC in column "METABRIC". p-values truncated at 2.2e-16 upstream.
+combine_p_tables <- function(grade_p, grade_r, age_p, age_r, surv_signed) {
+  modules <- rownames(grade_p)
+  surv_p <- 10^(-abs(surv_signed[modules, , drop = FALSE]))
+  surv_poor <- -sign(surv_signed[modules, , drop = FALSE])  # > 0 = poor prognosis
+  surv_disc <- which(colnames(surv_signed) == "METABRIC")
+  rownames(age_p) <- rownames(age_r) <- modules
+  rbind(
+    combine_matrix(grade_p, grade_r, "high_grade"),
+    combine_matrix(grade_p, -grade_r, "low_grade"),
+    combine_matrix(age_p, -age_r, "early_onset"),
+    combine_matrix(age_p, age_r, "late_onset"),
+    combine_matrix(surv_p, surv_poor, "poor_prognosis", surv_disc),
+    combine_matrix(surv_p, -surv_poor, "good_prognosis", surv_disc)
+  )
+}
+write.csv(combine_p_tables(moduleTraitPvalue_tot_grade, moduleTraitCor_tot_grade, moduleTraitPvalue_tot_age, moduleTraitCor_tot_age, pvalue_merge),
+          "results/2025_fix/combined_p_fisher_stouffer_global.csv", row.names=FALSE)
+
 library(ggrepel)
-df<-data.frame(pgrade= -log10(pmerged_hg), page= -log10(pmerged_la), psurv=-log10(pmerged_ls), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
+df<-data.frame(pgrade= -log10(pmerged_hg), page= -log10(pmerged_la), psurv=-log10(pmerged_ls[names(pmerged_hg)]), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
 
-png("results/2025/global_p_highgrade.png", res=300, 1500,1500)
+png("results/2025_fix/global_p_highgrade.png", res=300, 1500,1500)
 ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
-pdf("results/2025/global_p_highgrade.pdf", 5,5)
+pdf("results/2025_fix/global_p_highgrade.pdf", 5,5)
 ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
 
-png("results/2025/global_p_lowage.png", res=300, 1500,1500)
+png("results/2025_fix/global_p_lowage.png", res=300, 1500,1500)
 ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
-pdf("results/2025/global_p_lowage.pdf", 5,5)
+pdf("results/2025_fix/global_p_lowage.pdf", 5,5)
 ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
 
 df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
 
-png("results/2025/global_p_aggressiveness.png", res=300, 2000,2000)
+png("results/2025_fix/global_p_aggressiveness.png", res=300, 2000,2000)
 ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 
-pdf("results/2025/global_p_aggressiveness.pdf", 5,5)
+pdf("results/2025_fix/global_p_aggressiveness.pdf", 5,5)
 ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 
 
-df<-data.frame(pgrade= -log10(pmerged_lg), page= -log10(pmerged_ha), psurv=-log10(pmerged_hs), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
+df<-data.frame(pgrade= -log10(pmerged_lg), page= -log10(pmerged_ha), psurv=-log10(pmerged_hs[names(pmerged_lg)]), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
 
-png("results/2025/global_p_lowgrade.png", res=300, 1500,1500)
+png("results/2025_fix/global_p_lowgrade.png", res=300, 1500,1500)
 ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
-pdf("results/2025/global_p_lowgrade.pdf", 5, 5)
+pdf("results/2025_fix/global_p_lowgrade.pdf", 5, 5)
 ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
-png("results/2025/global_p_highage.png", res=300, 1500,1500)
+png("results/2025_fix/global_p_highage.png", res=300, 1500,1500)
 ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
-pdf("results/2025/global_p_highage.pdf", 5,5)
+pdf("results/2025_fix/global_p_highage.pdf", 5,5)
 ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
 df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
 
-png("results/2025/global_p_LOWaggressiveness.png", res=300, 2000,2000)
+png("results/2025_fix/global_p_LOWaggressiveness.png", res=300, 2000,2000)
 ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 
-pdf("results/2025/global_p_LOWaggressiveness.pdf", 5,5)
+pdf("results/2025_fix/global_p_LOWaggressiveness.pdf", 5,5)
 ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 
@@ -255,47 +300,47 @@ dev.off()
 ############# Basal
 ###################################################
 
-load("results/2025/moduleTraitPvalue_METABRIC_basal.RData")
+load("results/2025_fix/moduleTraitPvalue_METABRIC_basal.RData")
 mtPval_metabric<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_MAINZ_basal.RData")
+load("results/2025_fix/moduleTraitPvalue_MAINZ_basal.RData")
 mtPval_Mainz<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_UNT_basal.RData")
+load("results/2025_fix/moduleTraitPvalue_UNT_basal.RData")
 mtPval_Unt<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_UPP_basal.RData")
+load("results/2025_fix/moduleTraitPvalue_UPP_basal.RData")
 mtPval_Upp<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_TRANSBIG_basal.RData")
+load("results/2025_fix/moduleTraitPvalue_TRANSBIG_basal.RData")
 mtPval_Transbig<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_VDX_basal.RData")
+load("results/2025_fix/moduleTraitPvalue_VDX_basal.RData")
 mtPval_Vdx<-moduleTraitPvalue_tot
 
-load("results/2025/moduleTraitPvalue_NKI_basal.RData")
+load("results/2025_fix/moduleTraitPvalue_NKI_basal.RData")
 mtPval_NKI<-moduleTraitPvalue_tot
 
 
-load("results/2025/moduleTraitCor_METABRIC_basal.RData")
+load("results/2025_fix/moduleTraitCor_METABRIC_basal.RData")
 mtCor_metabric<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_MAINZ_basal.RData")
+load("results/2025_fix/moduleTraitCor_MAINZ_basal.RData")
 mtCor_Mainz<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_UNT_basal.RData")
+load("results/2025_fix/moduleTraitCor_UNT_basal.RData")
 mtCor_Unt<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_UPP_basal.RData")
+load("results/2025_fix/moduleTraitCor_UPP_basal.RData")
 mtCor_Upp<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_TRANSBIG_basal.RData")
+load("results/2025_fix/moduleTraitCor_TRANSBIG_basal.RData")
 mtCor_Transbig<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_VDX_basal.RData")
+load("results/2025_fix/moduleTraitCor_VDX_basal.RData")
 mtCor_Vdx<-moduleTraitCor_tot
 
-load("results/2025/moduleTraitCor_NKI_basal.RData")
+load("results/2025_fix/moduleTraitCor_NKI_basal.RData")
 mtCor_NKI<-moduleTraitCor_tot
 
 
@@ -323,7 +368,7 @@ moduleTraitPvalue_tot_age<-moduleTraitPvalue_tot[,grep("age", colnames(moduleTra
 
 
 
-pdf("results/2025/ModuleGradeRelationship_alldatasets_basal.pdf",7,7)
+pdf("results/2025_fix/ModuleGradeRelationship_alldatasets_basal.pdf",7,7)
 textMatrix = paste(signif(moduleTraitCor_tot_grade, 2), "\n(",
                    signif(moduleTraitPvalue_tot_grade, 1), ")", sep = "");
 
@@ -351,7 +396,7 @@ dev.off();
 
 
 
-pdf("results/2025/ModuleAgeRelationship_alldatasets_basal.pdf", 7,7)
+pdf("results/2025_fix/ModuleAgeRelationship_alldatasets_basal.pdf", 7,7)
 
 textMatrix = paste(signif(moduleTraitCor_tot_age, 2), "\n(",
                    signif(moduleTraitPvalue_tot_age, 1), ")", sep = "");
@@ -421,13 +466,13 @@ names(pmerged_la)<-rownames(moduleTraitPvalue_tot_age)
 ageavg<-rowMeans(moduleTraitCor_tot_age)
 
 #####survival
-load(file="results/2025/pvalue_merge_surv_basal.RData")
+load(file="results/2025_fix/pvalue_merge_surv_basal.RData")
 
 #p merged for low survival
 pmerged_ls<-c()
 for(row in 1:nrow(pvalue_merge_b)){
   istwo <- rep(T, ncol(pvalue_merge_b))
-  toinvert <- ifelse(pvalue_merge[row,]>0,T,F)
+  toinvert <- ifelse(pvalue_merge_b[row,]>0,T,F)
   ps<-pvalue_merge_b[row,]
   ps[ps<0]<- (-ps[ps<0])
   ps<-10^(-ps)
@@ -448,61 +493,62 @@ for(row in 1:nrow(pvalue_merge_b)){
 names(pmerged_hs)<-rownames(pvalue_merge_b)
 pmerged_hs<- pmerged_hs[-which(names(pmerged_hs)=="b_Unconnected")]
 
+write.csv(combine_p_tables(moduleTraitPvalue_tot_grade, moduleTraitCor_tot_grade, moduleTraitPvalue_tot_age, moduleTraitCor_tot_age, pvalue_merge_b),
+          "results/2025_fix/combined_p_fisher_stouffer_basal.csv", row.names=FALSE)
+
 library(ggrepel)
-df<-data.frame(pgrade= -log10(pmerged_hg), page= -log10(pmerged_la), psurv=-log10(pmerged_ls), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
+df<-data.frame(pgrade= -log10(pmerged_hg), page= -log10(pmerged_la), psurv=-log10(pmerged_ls[names(pmerged_hg)]), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
 
-png("results/2025/global_p_highgrade_b.png", res=300, 1500,1500)
+png("results/2025_fix/global_p_highgrade_b.png", res=300, 1500,1500)
 ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
-pdf("results/2025/global_p_highgrade_b.pdf", 5,5)
+pdf("results/2025_fix/global_p_highgrade_b.pdf", 5,5)
 ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
-png("results/2025/global_p_lowage_b.png", res=300, 1500,1500)
+png("results/2025_fix/global_p_lowage_b.png", res=300, 1500,1500)
 ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
-pdf("results/2025/global_p_lowage_b.pdf", 5,5)
-ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
-dev.off()
-
-df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
-
-png("results/2025/global_p_aggressiveness_b.png", res=300, 2000,2000)
-ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-dev.off()
-
-pdf("results/2025/global_p_aggressiveness_b.pdf", 5,5)
-ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-dev.off()
-
-df<-data.frame(pgrade= -log10(pmerged_lg), page= -log10(pmerged_ha), psurv=-log10(pmerged_hs), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
-
-png("results/2025/global_p_lowgrade_b.png", res=300, 1500,1500)
-ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
-dev.off()
-
-pdf("results/2025/global_p_lowgrade_b.pdf", 5,5)
-ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
-dev.off()
-
-png("results/2025/global_p_highage_b.png", res=300, 1500,1500)
-ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
-dev.off()
-
-pdf("results/2025/global_p_highage_b.pdf", 5,5)
+pdf("results/2025_fix/global_p_lowage_b.pdf", 5,5)
 ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
 dev.off()
 
 df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
 
-png("results/2025/global_p_LOWaggressiveness_b.png", res=300, 2000,2000)
+png("results/2025_fix/global_p_aggressiveness_b.png", res=300, 2000,2000)
 ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 
-pdf("results/2025/global_p_LOWaggressiveness_b.pdf", 5,5)
+pdf("results/2025_fix/global_p_aggressiveness_b.pdf", 5,5)
 ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 dev.off()
 
+df<-data.frame(pgrade= -log10(pmerged_lg), page= -log10(pmerged_ha), psurv=-log10(pmerged_hs[names(pmerged_lg)]), grade=gradeavg, age=ageavg, module=rownames(moduleTraitPvalue_tot_age))
 
+png("results/2025_fix/global_p_lowgrade_b.png", res=300, 1500,1500)
+ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+pdf("results/2025_fix/global_p_lowgrade_b.pdf", 5,5)
+ggplot(df, aes(x=grade, y=pgrade, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+png("results/2025_fix/global_p_highage_b.png", res=300, 1500,1500)
+ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+pdf("results/2025_fix/global_p_highage_b.pdf", 5,5)
+ggplot(df, aes(x=age, y=page, label=module))+geom_point()+geom_label_repel()+theme_classic()
+dev.off()
+
+df$module<-factor(df$module, levels=df$module[(order(df$page+df$pgrade+df$psurv, decreasing=T))])
+
+png("results/2025_fix/global_p_LOWaggressiveness_b.png", res=300, 2000,2000)
+ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
+
+pdf("results/2025_fix/global_p_LOWaggressiveness_b.pdf", 5,5)
+ggplot(df, aes(x=module, y=page+pgrade+psurv))+geom_bar(stat="identity")+ theme_classic()+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
