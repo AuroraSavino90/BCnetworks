@@ -21,7 +21,7 @@ plot(-log10(p), -log10(p_sub))
 p_sub_age<-c()
 for(i in 1:ncol(MEs)){p_sub_age<-c(p_sub_age, (summary(lm(as.numeric(meta$age_at_diagnosis)~MEs[,i]+meta$NOT_IN_OSLOVAL_Pam50Subtype))[[4]][2,4]))}
 coef_sub_age<-c()
-for(i in 1:ncol(MEs)){coef_sub_age<-c(coef_sub_age, (summary(lm(as.numeric(meta$age)~MEs[,i]+meta$NOT_IN_OSLOVAL_Pam50Subtype))[[4]][2,1]))}
+for(i in 1:ncol(MEs)){coef_sub_age<-c(coef_sub_age, (summary(lm(as.numeric(meta$age_at_diagnosis)~MEs[,i]+meta$NOT_IN_OSLOVAL_Pam50Subtype))[[4]][2,1]))}
 
 surv<-Complete_METABRIC_Clinical_Survival_Data__DSS
 surv[surv[,1]>1825,"status"]<-0
@@ -54,7 +54,8 @@ collapse<-collapse[-which(rownames(collapse)=="Unconnected"),]
 #collapse[collapse<2.2*10^(-16)]<-2.2*10^(-16)
 #pheatmap(-log10(collapse))
 
-png("ModuleGradeRelationship_sub.png", res = 300, width=1500, height = 2000)
+dir.create("results/2025_fix", showWarnings=FALSE)
+png("results/2025_fix/ModuleGradeRelationship_sub.png", res = 300, width=1500, height = 2000)
 
 moduleTraitCor_tot_grade<-coef_collapse
 moduleTraitPvalue_tot_grade<-collapse
@@ -86,4 +87,3 @@ labeledHeatmap(Matrix = moduleTraitCor_tot_grade,
                zlim = c(min(moduleTraitCor_tot_grade[,1]),max(moduleTraitCor_tot_grade[,1])),
                main = paste("Module - grade"))
 dev.off();
-
