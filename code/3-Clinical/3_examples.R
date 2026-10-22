@@ -12,18 +12,18 @@ colnames(MEs)<-gsub("^ME","", colnames(MEs))
 MEs_basal= moduleEigengenes(t(metabric[,meta$NOT_IN_OSLOVAL_Pam50Subtype=="Basal"]), centrality_basal$module)$eigengenes
 colnames(MEs_basal)<-gsub("^ME","", colnames(MEs_basal))
 
-png("results/2025/modulegrade_e2f.png", res = 300, width=1000, height = 1000)
+png("results/2025_fix/modulegrade_e2f.png", res = 300, width=1000, height = 1000)
 boxplot(MEs[,"E2F_TARGETS"]~meta$grade, outline=F, xlab="grade", ylab="Module Eigengene")
 dev.off()
 
-pdf("results/2025/modulegrade_e2f.pdf", width=5, height = 5)
+pdf("results/2025_fix/modulegrade_e2f.pdf", width=5, height = 5)
 boxplot(MEs[,"E2F_TARGETS"]~meta$grade, outline=F, xlab="grade", ylab="Module Eigengene")
 dev.off()
 
-png("results/2025/modulegrade_estrogen.png", res = 300, width=1000, height = 1000)
+png("results/2025_fix/modulegrade_estrogen.png", res = 300, width=1000, height = 1000)
 boxplot(MEs[,"ESTROGEN_RESPONSE_EARLY"]~meta$grade, outline=F, xlab="grade", ylab="Module Eigengene")
 dev.off()
 
-pdf("results/2025/modulegrade_estrogen.pdf", width=5, height =5)
+pdf("results/2025_fix/modulegrade_estrogen.pdf", width=5, height =5)
 boxplot(MEs[,"ESTROGEN_RESPONSE_EARLY"]~meta$grade, outline=F, xlab="grade", ylab="Module Eigengene")
 dev.off()
