@@ -7,6 +7,26 @@ load(file="results/2025/centrality_basal.RData")
 ###moduleColors_basal in other subtypes
 moduleColors_basal<-centrality_basal$module
 
+## sample-label permutation test for kWithin (Basal vs each other subtype).
+## Group sizes are kept in the permutations, so the null includes the effect of sample size on kWithin.
+perm_kwithin<-function(X, subtype, mods, n_perm=200){
+  res<-NULL
+  for(o in c("LumA", "LumB", "Her2")){
+    idx<-which(subtype %in% c("Basal", o))
+    for(m in setdiff(unique(mods), "b_Unconnected")){
+      g<-names(mods)[which(mods==m)]
+      mk<-function(s) mean(rowSums(((1+cor(t(X[g, idx[s]]), use="p"))/2)^6)-1) # mean kWithin, signed adjacency, power 6
+      stat<-function(l) mk(l=="Basal")-mk(l==o)
+      obs<-stat(subtype[idx])
+      null<-replicate(n_perm, stat(sample(subtype[idx])))
+      res<-rbind(res, data.frame(module=m, comparison=paste0("Basal_vs_", o), delta_kwithin=obs, null_mean_delta=mean(null), p_perm=(1+sum(null>=obs))/(1+n_perm)))
+    }
+  }
+  res$fdr<-p.adjust(res$p_perm, method="BH")
+  res
+}
+set.seed(1)
+
 ADJ1=adjacency(t(metabric[,meta$NOT_IN_OSLOVAL_Pam50Subtype=="LumA"]), power = 6, type= "signed")
 Alldegrees_basalmod_lumA=intramodularConnectivity(ADJ1, moduleColors_basal)
 
@@ -34,17 +54,19 @@ for(i in 1:length(unique(moduleColors_basal))){
   p <- ggboxplot(df, x = "subtype", y = "kwithin")
   #  Add p-value
   p <- p + stat_compare_means(comparisons = my_comparisons, ref.group = "Basal", 
-                              method = "wilcox.test", method.args = list(alternative = "greater")) # Add pairwise comparisons p-value
+                              method = "wilcox.test", method.args = list(alternative = "greater", paired = TRUE)) # Add pairwise comparisons p-value
   
   
-  png(paste("results/2025/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_kwithin.png",sep=""), res=300, 1000, 1000)
+  png(paste("results/2025_fix/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_kwithin.png",sep=""), res=300, 1000, 1000)
  print(p)
  dev.off()
  
- pdf(paste("results/2025/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_kwithin.pdf",sep=""), 5,5)
+ pdf(paste("results/2025_fix/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_kwithin.pdf",sep=""), 5,5)
  print(p)
  dev.off()
 }
+perm_metabric<-perm_kwithin(metabric, meta$NOT_IN_OSLOVAL_Pam50Subtype, setNames(moduleColors_basal, rownames(metabric)))
+write.csv(perm_metabric, "results/2025_fix/kwithin_permutation_METABRIC.csv", row.names=FALSE)
 
 
 ####module eigengenes across subtypes
@@ -59,19 +81,19 @@ for(i in 1:length(unique(moduleColors_basal))){
                       MEs_basal[meta$NOT_IN_OSLOVAL_Pam50Subtype=="LumA",unique(moduleColors_basal)[i]], 
                       MEs_basal[meta$NOT_IN_OSLOVAL_Pam50Subtype=="LumB",unique(moduleColors_basal)[i]], 
                       MEs_basal[meta$NOT_IN_OSLOVAL_Pam50Subtype=="Her2",unique(moduleColors_basal)[i]]),
-                 subtype=rep(c("Basal", "LumA", "LumB", "Her2"), times=table(meta$NOT_IN_OSLOVAL_Pam50Subtype)[c("Basal", "Her2", "LumA", "LumB")]))
+                 subtype=rep(c("Basal", "LumA", "LumB", "Her2"), times=table(meta$NOT_IN_OSLOVAL_Pam50Subtype)[c("Basal", "LumA", "LumB", "Her2")]))
   
   my_comparisons <- list( c("Basal", "LumA"), c("Basal", "LumB"), c("Basal", "Her2") )
   p <- ggboxplot(df, x = "subtype", y = "ME")
   #  Add p-value
   p <- p + stat_compare_means(comparisons = my_comparisons, ref.group = "Basal", 
-                              method = "wilcox.test", method.args = list(alternative = "greater")) # Add pairwise comparisons p-value
+                              method = "wilcox.test", method.args = list(alternative = "two.sided")) # Add pairwise comparisons p-value
   
   
-  png(paste("results/2025/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_ME.png",sep=""), res=300, 1000, 1000)
+  png(paste("results/2025_fix/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_ME.png",sep=""), res=300, 1000, 1000)
   print(p)
   dev.off()
-  pdf(paste("results/2025/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_ME.pdf",sep=""), 5,5)
+  pdf(paste("results/2025_fix/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_ME.pdf",sep=""), 5,5)
   print(p)
   dev.off()
 }
@@ -94,18 +116,18 @@ names(moduleColors_basal)<-rownames(metabric)
 moduleColors_basal_ic<-moduleColors_basal[incommon]
 
 
-ADJ1=adjacency(t(TCGA_dedupl_ic[,anno$subtype=="LumA"]), power = 6, type= "signed")
+ADJ1=adjacency(t(TCGA_dedupl_ic[,which(anno$subtype=="LumA")]), power = 6, type= "signed")
 Alldegrees_basalmod_lumA=intramodularConnectivity(ADJ1, moduleColors_basal_ic)
 
 
-ADJ1=adjacency(t(TCGA_dedupl_ic[,anno$subtype=="LumB"]), power = 6, type= "signed")
+ADJ1=adjacency(t(TCGA_dedupl_ic[,which(anno$subtype=="LumB")]), power = 6, type= "signed")
 Alldegrees_basalmod_lumB=intramodularConnectivity(ADJ1, moduleColors_basal_ic)
 
 
-ADJ1=adjacency(t(TCGA_dedupl_ic[,anno$subtype=="Her2"]), power = 6, type= "signed")
+ADJ1=adjacency(t(TCGA_dedupl_ic[,which(anno$subtype=="Her2")]), power = 6, type= "signed")
 Alldegrees_basalmod_her2=intramodularConnectivity(ADJ1, moduleColors_basal_ic)
 
-ADJ1=adjacency(t(TCGA_dedupl_ic[,anno$subtype=="Basal"]), power = 6, type= "signed")
+ADJ1=adjacency(t(TCGA_dedupl_ic[,which(anno$subtype=="Basal")]), power = 6, type= "signed")
 Alldegrees_basalmod_basal=intramodularConnectivity(ADJ1, moduleColors_basal_ic)
 
 
@@ -121,32 +143,288 @@ for(i in 1:length(unique(moduleColors_basal_ic))){
   p <- ggboxplot(df, x = "subtype", y = "kwithin")
   #  Add p-value
   p <- p + stat_compare_means(comparisons = my_comparisons, ref.group = "Basal", 
-                              method = "wilcox.test", method.args = list(alternative = "greater")) # Add pairwise comparisons p-value
+                              method = "wilcox.test", method.args = list(alternative = "greater", paired = TRUE)) # Add pairwise comparisons p-value
   
   
-  png(paste("results/2025/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_kwithin_TCGA.png",sep=""), res=300, 1000, 1000)
+  png(paste("results/2025_fix/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_kwithin_TCGA.png",sep=""), res=300, 1000, 1000)
   print(p)
   dev.off()
-  pdf(paste("results/2025/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_kwithin_TCGA.pdf",sep=""), 5,5)
+  pdf(paste("results/2025_fix/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_kwithin_TCGA.pdf",sep=""), 5,5)
   print(p)
   dev.off()
 }
+perm_tcga<-perm_kwithin(TCGA_dedupl_ic, anno$subtype, moduleColors_basal_ic)
+write.csv(perm_tcga, "results/2025_fix/kwithin_permutation_TCGA.csv", row.names=FALSE)
+# basal-specific: delta>0 and FDR<0.05 in all three comparisons, in both datasets
+sel<-merge(perm_metabric, perm_tcga, by=c("module", "comparison"), suffixes=c("_METABRIC", "_TCGA"))
+sel$pass<-sel$delta_kwithin_METABRIC>0 & sel$fdr_METABRIC<0.05 & sel$delta_kwithin_TCGA>0 & sel$fdr_TCGA<0.05
+write.csv(aggregate(pass~module, sel, all), "results/2025_fix/basal_specific_modules.csv", row.names=FALSE)
 
 ####module eigengenes across subtypes
 
 metabric_ic<-metabric[incommon,]
 centrality_basal_ic<-centrality_basal[incommon,]
 
-pcaproj<-matrix(nrow=ncol(TCGA_dedupl_ic), ncol=length(unique(centrality_basal_ic$module)))
-for(i in 1:length(unique(centrality_basal_ic$module))){
-  pca <- prcomp(t(metabric_ic[centrality_basal_ic$module==unique(centrality_basal_ic$module)[i],]))
-  if(cor(pca$x[,1], MEs_basal[,unique(centrality_basal_ic$module)[i]])<0){
-    pca$rotation[,1]<-(-pca$rotation[,1])
+#####################################################################
+###function to project MEs computed on a dataset (original_data) on new transcriptomic data (newdata)
+#####################################################################
+
+pcaproject <- function(
+    newdata,
+    original_data,
+    modules,
+    ME = NULL,
+    min_common_genes = 2L,
+    min_overlap_fraction = 0.50
+) {
+  original_data <- as.matrix(original_data)
+  newdata <- as.matrix(newdata)
+  
+  if (is.null(rownames(original_data)) || is.null(rownames(newdata))) {
+    stop("Both original_data and newdata must have gene symbols as row names.")
   }
-  commongenes<-rownames(TCGA_dedupl_ic)[which(rownames(TCGA_dedupl_ic) %in% rownames(metabric_ic[centrality_basal_ic$module==unique(centrality_basal_ic$module)[i],]))]
-  data_forpca<-TCGA_dedupl_ic[commongenes,]
-  pcaproj[,i]<-colSums(t(scale(t(data_forpca), pca$center[commongenes], pca$scale)) * c(pca$rotation[commongenes,1]))
+  
+  if (length(modules) != nrow(original_data)) {
+    stop("'modules' must contain one module label for every row of original_data.")
+  }
+  
+  # Align module labels explicitly to original_data gene order.
+  if (!is.null(names(modules))) {
+    missing_module_genes <- setdiff(rownames(original_data), names(modules))
+    if (length(missing_module_genes) > 0) {
+      stop(
+        "Missing module assignments for ",
+        length(missing_module_genes),
+        " genes in original_data."
+      )
+    }
+    modules <- modules[rownames(original_data)]
+  }
+  
+  modules <- as.character(modules)
+  module_names <- levels(factor(modules[!is.na(modules)]))
+  
+  pcaproj <- matrix(
+    NA_real_,
+    nrow = ncol(newdata),
+    ncol = length(module_names),
+    dimnames = list(colnames(newdata), module_names)
+  )
+  
+  diagnostics <- vector("list", length(module_names))
+  names(diagnostics) <- module_names
+  
+  for (module_name in module_names) {
+    module_genes <- rownames(original_data)[modules == module_name]
+    common_genes <- intersect(module_genes, rownames(newdata))
+    
+    n_module_genes <- length(module_genes)
+    overlap_fraction <- length(common_genes) / n_module_genes
+    
+    if (length(common_genes) < min_common_genes) {
+      warning(
+        "Module ", module_name,
+        " has fewer than ", min_common_genes,
+        " common genes; projection set to NA."
+      )
+      diagnostics[[module_name]] <- data.frame(
+        module = module_name,
+        n_module_genes = n_module_genes,
+        n_common_genes = length(common_genes),
+        overlap_fraction = overlap_fraction,
+        n_genes_used = 0L,
+        stringsAsFactors = FALSE
+      )
+      next
+    }
+    
+    if (overlap_fraction < min_overlap_fraction) {
+      warning(
+        "Module ", module_name,
+        " has only ", round(100 * overlap_fraction, 1),
+        "% gene overlap between original_data and newdata."
+      )
+    }
+    
+    # Refit the reference PC on the genes that can actually be projected.
+    # This avoids treating absent genes as zero contributions.
+    training <- t(original_data[common_genes, , drop = FALSE])
+    
+    gene_sd <- apply(training, 2, sd, na.rm = TRUE)
+    valid_genes <- colnames(training)[
+      is.finite(gene_sd) & gene_sd > 0 &
+        colSums(!is.finite(training)) == 0
+    ]
+    
+    if (length(valid_genes) < min_common_genes) {
+      warning(
+        "Module ", module_name,
+        " has fewer than ", min_common_genes,
+        " finite, variable common genes; projection set to NA."
+      )
+      diagnostics[[module_name]] <- data.frame(
+        module = module_name,
+        n_module_genes = n_module_genes,
+        n_common_genes = length(common_genes),
+        overlap_fraction = overlap_fraction,
+        n_genes_used = length(valid_genes),
+        stringsAsFactors = FALSE
+      )
+      next
+    }
+    
+    training <- training[, valid_genes, drop = FALSE]
+    
+    # WGCNA::moduleEigengenes uses scale = TRUE by default. Therefore the
+    # reference PCA and the new-data projection must use the same gene-wise
+    # centering and scaling estimated in METABRIC.
+    pca <- prcomp(
+      training,
+      center = TRUE,
+      scale. = TRUE,
+      rank. = 1
+    )
+    
+    # prcomp$x[,1] = U[,1] * d1, whereas moduleEigengenes returns U[,1].
+    singular_value_1 <- pca$sdev[1] * sqrt(nrow(training) - 1)
+    
+    if (!is.finite(singular_value_1) || singular_value_1 <= 0) {
+      warning("Invalid first singular value for module ", module_name, ".")
+      next
+    }
+    
+    # Orient the projected PC exactly as the corresponding WGCNA eigengene.
+    if (!is.null(ME) && module_name %in% colnames(ME)) {
+      common_samples <- intersect(rownames(pca$x), rownames(ME))
+      
+      if (length(common_samples) >= 3) {
+        reference_score <- pca$x[common_samples, 1] / singular_value_1
+        orientation_cor <- suppressWarnings(
+          cor(
+            reference_score,
+            ME[common_samples, module_name],
+            use = "pairwise.complete.obs"
+          )
+        )
+        
+        if (is.finite(orientation_cor) && orientation_cor < 0) {
+          pca$rotation[, 1] <- -pca$rotation[, 1]
+        }
+      }
+    } else {
+      # Fallback matching WGCNA's default align = "along average".
+      reference_score <- pca$x[, 1] / singular_value_1
+      average_expression <- rowMeans(scale(training), na.rm = TRUE)
+      orientation_cor <- suppressWarnings(
+        cor(reference_score, average_expression, use = "pairwise.complete.obs")
+      )
+      
+      if (is.finite(orientation_cor) && orientation_cor < 0) {
+        pca$rotation[, 1] <- -pca$rotation[, 1]
+      }
+    }
+    
+    new_samples_by_genes <- t(newdata[valid_genes, , drop = FALSE])
+    
+    if (any(!is.finite(new_samples_by_genes))) {
+      stop(
+        "Non-finite values found in newdata for module ", module_name,
+        ". Clean or impute TPMlog before projection."
+      )
+    }
+    
+    new_scaled <- sweep(
+      new_samples_by_genes,
+      2,
+      pca$center,
+      FUN = "-"
+    )
+    new_scaled <- sweep(
+      new_scaled,
+      2,
+      pca$scale,
+      FUN = "/"
+    )
+    
+    pcaproj[, module_name] <- as.numeric(
+      new_scaled %*% pca$rotation[, 1, drop = FALSE]
+    ) / singular_value_1
+    
+    diagnostics[[module_name]] <- data.frame(
+      module = module_name,
+      n_module_genes = n_module_genes,
+      n_common_genes = length(common_genes),
+      overlap_fraction = overlap_fraction,
+      n_genes_used = length(valid_genes),
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  attr(pcaproj, "projection_diagnostics") <- do.call(rbind, diagnostics)
+  pcaproj
 }
+
+validate_pcaproject <- function(
+    original_data,
+    modules,
+    ME,
+    minimum_abs_correlation = 0.999
+) {
+  projected_reference <- pcaproject(
+    newdata = original_data,
+    original_data = original_data,
+    modules = modules,
+    ME = ME,
+    min_overlap_fraction = 1
+  )
+  
+  common_modules <- intersect(
+    colnames(projected_reference),
+    colnames(ME)
+  )
+  
+  validation <- data.frame(
+    module = common_modules,
+    correlation_with_WGCNA_ME = vapply(
+      common_modules,
+      function(module_name) {
+        suppressWarnings(
+          cor(
+            projected_reference[, module_name],
+            ME[, module_name],
+            use = "pairwise.complete.obs"
+          )
+        )
+      },
+      numeric(1)
+    ),
+    stringsAsFactors = FALSE
+  )
+  
+  validation$abs_correlation <- abs(
+    validation$correlation_with_WGCNA_ME
+  )
+  
+  failed <- validation[
+    !is.finite(validation$abs_correlation) |
+      validation$abs_correlation < minimum_abs_correlation,
+    ,
+    drop = FALSE
+  ]
+  
+  if (nrow(failed) > 0) {
+    print(failed)
+    stop(
+      "The PCA projection does not reproduce the reference WGCNA eigengenes ",
+      "for one or more modules."
+    )
+  }
+  
+  validation
+}
+
+rownames(MEs_basal)<-colnames(metabric)
+pcaproj<-pcaproject(newdata=TCGA_dedupl_ic, original_data=metabric, modules=centrality_basal$module, ME=MEs_basal)[,unique(centrality_basal_ic$module)]
 
 colnames(pcaproj)<-unique(centrality_basal_ic$module)
 
@@ -163,13 +441,13 @@ for(i in 1:length(unique(moduleColors_basal_ic))){
   p <- ggboxplot(df, x = "subtype", y = "ME")
   #  Add p-value
   p <- p + stat_compare_means(comparisons = my_comparisons, ref.group = "Basal", 
-                              method = "wilcox.test", method.args = list(alternative = "greater")) # Add pairwise comparisons p-value
+                              method = "wilcox.test", method.args = list(alternative = "two.sided")) # Add pairwise comparisons p-value
   
   
-  png(paste("results/2025/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_ME_TCGA.png",sep=""), res=300, 1000, 1000)
+  png(paste("results/2025_fix/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_ME_TCGA.png",sep=""), res=300, 1000, 1000)
   print(p)
   dev.off()
-  pdf(paste("results/2025/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_ME_TCGA.pdf",sep=""), 5,5)
+  pdf(paste("results/2025_fix/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_ME_TCGA.pdf",sep=""), 5,5)
   print(p)
   dev.off()
 }
