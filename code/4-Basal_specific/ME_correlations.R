@@ -30,11 +30,11 @@ ct<-cor.test(MEs_basal$b_E2F_TARGETS, MEs_basal$b_EPITHELIAL_MESENCHYMAL_TRANSIT
 write.csv(data.frame(r=ct$estimate, p=ct$p.value, n=nrow(MEs_basal)), "results/2025_fix/bE2F_vs_bEMT_cor.csv", row.names=FALSE)
 
 png("results/2025_fix/bE2F_vs_bEMT.png", res=300, 1300, 1300)
-ggplot(MEs_basal, aes(x=b_E2F_TARGETS, y=b_EPITHELIAL_MESENCHYMAL_TRANSITION))+geom_point()+geom_smooth(method="lm", se=F)+theme_classic()
+print(ggplot(MEs_basal, aes(x=b_E2F_TARGETS, y=b_EPITHELIAL_MESENCHYMAL_TRANSITION))+geom_point()+geom_smooth(method="lm", se=F)+theme_classic())
 dev.off()
 
 pdf("results/2025_fix/bE2F_vs_bEMT.pdf", 4,4)
-ggplot(MEs_basal, aes(x=b_E2F_TARGETS, y=b_EPITHELIAL_MESENCHYMAL_TRANSITION))+geom_point()+geom_smooth(method="lm", se=F)+theme_classic()
+print(ggplot(MEs_basal, aes(x=b_E2F_TARGETS, y=b_EPITHELIAL_MESENCHYMAL_TRANSITION))+geom_point()+geom_smooth(method="lm", se=F)+theme_classic())
 dev.off()
 
 
