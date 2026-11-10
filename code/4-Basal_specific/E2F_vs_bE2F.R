@@ -56,6 +56,7 @@ BRCA_subtype <- TCGAquery_subtype(tumor = "BRCA")
 basal_tcga<-which(BRCA_subtype$BRCA_Subtype_PAM50[match(substr(colnames(TCGA_dedupl),1,12), BRCA_subtype$patient)]=="Basal")
 mods_tcga<-list(E2F_TARGETS=intersect(rownames(centrality_global)[which(moduleColors_global=="E2F_TARGETS")], rownames(TCGA_dedupl)),
                 b_E2F_TARGETS=intersect(rownames(centrality_basal)[which(moduleColors_basal=="b_E2F_TARGETS")], rownames(TCGA_dedupl)))
+mods_tcga<-lapply(mods_tcga, function(g) g[apply(TCGA_dedupl[g, basal_tcga], 1, sd)>0]) # drop genes constant in TCGA basal (NA correlations)
 df<-do.call(rbind, lapply(names(mods_tcga), function(m) data.frame(module=m,
        kwithin=(rowSums(adjacency(t(TCGA_dedupl[mods_tcga[[m]], basal_tcga]), power = 6, type= "signed"))-1)/(length(mods_tcga[[m]])-1))))
 
@@ -70,7 +71,6 @@ pdf("results/2025_fix/E2F_globalvsbasal_kwithin_TCGA.pdf", 2,6)
 print(p)
 dev.off()
 
-library(VennDiagram)
 library(ggVennDiagram)
 # Combine into a named list
 gene_lists <- list(
@@ -79,22 +79,22 @@ gene_lists <- list(
 )
 
 png("results/2025_fix/E2F_globalvsbasal.png", width = 3000, height = 3500, res = 300)
-ggVennDiagram(gene_lists,
+print(ggVennDiagram(gene_lists,
               label_alpha = 0,
               edge_size = 0.5,
               category.names = names(gene_lists), label = "count") +
   scale_fill_gradient(low = "white", high = "#0073C2FF") +
   theme(text = element_text(size = 14),
-        plot.margin = margin(2, 2, 2, 2, "cm")) + scale_x_continuous(expand = expansion(mult = .5)) # generous margin
+        plot.margin = margin(2, 2, 2, 2, "cm")) + scale_x_continuous(expand = expansion(mult = .5))) # generous margin
 dev.off()
 
 
 pdf("results/2025_fix/E2F_globalvsbasal.pdf", 7,7)
-ggVennDiagram(gene_lists,
+print(ggVennDiagram(gene_lists,
               label_alpha = 0,
               edge_size = 0.5,
               category.names = names(gene_lists), label = "count") +
   scale_fill_gradient(low = "white", high = "#0073C2FF") +
   theme(text = element_text(size = 14),
-        plot.margin = margin(2, 2, 2, 2, "cm")) + scale_x_continuous(expand = expansion(mult = .5)) # generous margin
+        plot.margin = margin(2, 2, 2, 2, "cm")) + scale_x_continuous(expand = expansion(mult = .5))) # generous margin
 dev.off()
