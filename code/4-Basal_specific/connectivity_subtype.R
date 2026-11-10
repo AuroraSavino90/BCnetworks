@@ -9,20 +9,20 @@ moduleColors_basal<-centrality_basal$module
 
 ## sample-label permutation test for kWithin (Basal vs each other subtype).
 ## Group sizes are kept in the permutations, so the null includes the effect of sample size on kWithin.
-perm_kwithin<-function(X, subtype, mods, n_perm=200){
+perm_kwithin<-function(X, subtype, mods, n_perm=1000){
   res<-NULL
   for(o in c("LumA", "LumB", "Her2")){
     idx<-which(subtype %in% c("Basal", o))
     for(m in setdiff(unique(mods), "b_Unconnected")){
       g<-names(mods)[which(mods==m)]
-      mk<-function(s) mean(rowSums(((1+cor(t(X[g, idx[s]]), use="p"))/2)^6)-1) # mean kWithin, signed adjacency, power 6
+      mk<-function(s){A<-((1+cor(t(X[g, idx[s]]), use="p"))/2)^6; diag(A)<-0; mean(rowSums(A, na.rm=TRUE))} # mean kWithin, signed adjacency, power 6; constant genes (NA cor) count 0, as in intramodularConnectivity
       stat<-function(l) mk(l=="Basal")-mk(l==o)
       obs<-stat(subtype[idx])
       null<-replicate(n_perm, stat(sample(subtype[idx])))
       res<-rbind(res, data.frame(module=m, comparison=paste0("Basal_vs_", o), delta_kwithin=obs, null_mean_delta=mean(null), p_perm=(1+sum(null>=obs))/(1+n_perm)))
     }
   }
-  res$fdr<-p.adjust(res$p_perm, method="BH")
+  res$fdr<-ave(res$p_perm, res$comparison, FUN=function(p) p.adjust(p, method="BH"))
   res
 }
 set.seed(1)
@@ -155,10 +155,6 @@ for(i in 1:length(unique(moduleColors_basal_ic))){
 }
 perm_tcga<-perm_kwithin(TCGA_dedupl_ic, anno$subtype, moduleColors_basal_ic)
 write.csv(perm_tcga, "results/2025_fix/kwithin_permutation_TCGA.csv", row.names=FALSE)
-# basal-specific: delta>0 and FDR<0.05 in all three comparisons, in both datasets
-sel<-merge(perm_metabric, perm_tcga, by=c("module", "comparison"), suffixes=c("_METABRIC", "_TCGA"))
-sel$pass<-sel$delta_kwithin_METABRIC>0 & sel$fdr_METABRIC<0.05 & sel$delta_kwithin_TCGA>0 & sel$fdr_TCGA<0.05
-write.csv(aggregate(pass~module, sel, all), "results/2025_fix/basal_specific_modules.csv", row.names=FALSE)
 
 ####module eigengenes across subtypes
 
@@ -451,3 +447,43 @@ for(i in 1:length(unique(moduleColors_basal_ic))){
   print(p)
   dev.off()
 }
+
+#####################################################################
+### basal-specific modules: METABRIC and TCGA combined (Fisher and Stouffer), Basal vs each other subtype
+### one-sided (Basal higher) p-values, BH across modules x comparisons; pass = FDR<0.05 in all three comparisons
+#####################################################################
+library(metap)
+comb_p<-function(d, p1, p2){
+  p<-pmin(pmax(as.matrix(d[,c(p1, p2)]), 1e-300), 1-1e-10)
+  d$p_fisher<-apply(p, 1, function(x) sumlog(x)$p)
+  d$p_stouffer<-apply(p, 1, function(x) sumz(x)$p)
+  d$fdr_fisher<-ave(d$p_fisher, d$comparison, FUN=function(p) p.adjust(p, method="BH")) # BH across modules, separately per comparison (as in section 3)
+  d$fdr_stouffer<-ave(d$p_stouffer, d$comparison, FUN=function(p) p.adjust(p, method="BH"))
+  d
+}
+# kWithin: permutation p-values are already one-sided
+kw<-comb_p(merge(perm_metabric, perm_tcga, by=c("module", "comparison"), suffixes=c("_METABRIC", "_TCGA")), "p_perm_METABRIC", "p_perm_TCGA")
+write.csv(kw, "results/2025_fix/kwithin_combined_METABRIC_TCGA.csv", row.names=FALSE)
+
+# ME: two-sided Wilcoxon on samples, converted to one-sided (Basal higher) with two2one
+me_test<-function(ME, subtype){
+  res<-NULL
+  for(o in c("LumA", "LumB", "Her2")){
+    for(m in setdiff(colnames(ME), "b_Unconnected")){
+      x<-ME[which(subtype=="Basal"), m]; y<-ME[which(subtype==o), m]
+      w<-wilcox.test(x, y, alternative="two.sided")
+      res<-rbind(res, data.frame(module=m, comparison=paste0("Basal_vs_", o), delta_median=median(x)-median(y),
+                                 p_two_sided=w$p.value, p_basal_higher=two2one(w$p.value, invert=w$statistic<length(x)*length(y)/2)))
+    }
+  }
+  res
+}
+stopifnot(identical(rownames(MEs_basal), rownames(meta)), identical(rownames(pcaproj), anno$barcode))
+me<-comb_p(merge(me_test(MEs_basal, meta$NOT_IN_OSLOVAL_Pam50Subtype), me_test(pcaproj, anno$subtype), by=c("module", "comparison"), suffixes=c("_METABRIC", "_TCGA")),
+           "p_basal_higher_METABRIC", "p_basal_higher_TCGA")
+write.csv(me, "results/2025_fix/ME_basal_vs_subtypes_combined_METABRIC_TCGA.csv", row.names=FALSE)
+
+sel<-merge(aggregate(cbind(kwithin_higher_stouffer=fdr_stouffer<0.05, kwithin_higher_fisher=fdr_fisher<0.05,
+                           kwithin_higher_each_dataset=delta_kwithin_METABRIC>0 & fdr_METABRIC<0.05 & delta_kwithin_TCGA>0 & fdr_TCGA<0.05)~module, kw, all),
+           aggregate(cbind(ME_higher_stouffer=fdr_stouffer<0.05, ME_higher_fisher=fdr_fisher<0.05)~module, me, all), by="module")
+write.csv(sel, "results/2025_fix/basal_specific_modules.csv", row.names=FALSE)
