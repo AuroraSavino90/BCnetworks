@@ -50,13 +50,9 @@ for(i in 1:length(unique(moduleColors_basal))){
                            Alldegrees_basalmod_her2[which(moduleColors_basal==unique(moduleColors_basal)[i]),2]),
                  subtype=rep(c("Basal", "LumA", "LumB", "Her2"), each=length(which(moduleColors_basal==unique(moduleColors_basal)[i]))))
   
-  my_comparisons <- list( c("Basal", "LumA"), c("Basal", "LumB"), c("Basal", "Her2") )
-  p <- ggboxplot(df, x = "subtype", y = "kwithin")
-  #  Add p-value
-  p <- p + stat_compare_means(comparisons = my_comparisons, ref.group = "Basal", 
-                              method = "wilcox.test", method.args = list(alternative = "greater", paired = TRUE)) # Add pairwise comparisons p-value
-  
-  
+  p <- ggboxplot(df, x = "subtype", y = "kwithin") # no gene-level p-values: significance from the permutation test (kwithin_combined_METABRIC_TCGA.csv)
+
+
   png(paste("results/2025_fix/",unique(moduleColors_basal)[i],"moduleColorsbasal_inothersubtypes_kwithin.png",sep=""), res=300, 1000, 1000)
  print(p)
  dev.off()
@@ -139,13 +135,9 @@ for(i in 1:length(unique(moduleColors_basal_ic))){
                            Alldegrees_basalmod_her2[which(moduleColors_basal_ic==unique(moduleColors_basal_ic)[i]),2]),
                  subtype=rep(c("Basal", "LumA", "LumB", "Her2"), each=length(which(moduleColors_basal_ic==unique(moduleColors_basal_ic)[i]))))
   
-  my_comparisons <- list( c("Basal", "LumA"), c("Basal", "LumB"), c("Basal", "Her2") )
-  p <- ggboxplot(df, x = "subtype", y = "kwithin")
-  #  Add p-value
-  p <- p + stat_compare_means(comparisons = my_comparisons, ref.group = "Basal", 
-                              method = "wilcox.test", method.args = list(alternative = "greater", paired = TRUE)) # Add pairwise comparisons p-value
-  
-  
+  p <- ggboxplot(df, x = "subtype", y = "kwithin") # no gene-level p-values: significance from the permutation test (kwithin_combined_METABRIC_TCGA.csv)
+
+
   png(paste("results/2025_fix/",unique(moduleColors_basal_ic)[i],"moduleColorsbasal_inothersubtypes_kwithin_TCGA.png",sep=""), res=300, 1000, 1000)
   print(p)
   dev.off()
@@ -450,7 +442,7 @@ for(i in 1:length(unique(moduleColors_basal_ic))){
 
 #####################################################################
 ### basal-specific modules: METABRIC and TCGA combined (Fisher and Stouffer), Basal vs each other subtype
-### one-sided (Basal higher) p-values, BH across modules x comparisons; pass = FDR<0.05 in all three comparisons
+### one-sided p-values, BH across modules separately per comparison; pass = FDR<0.05 in all three comparisons
 #####################################################################
 library(metap)
 comb_p<-function(d, p1, p2){
@@ -465,7 +457,7 @@ comb_p<-function(d, p1, p2){
 kw<-comb_p(merge(perm_metabric, perm_tcga, by=c("module", "comparison"), suffixes=c("_METABRIC", "_TCGA")), "p_perm_METABRIC", "p_perm_TCGA")
 write.csv(kw, "results/2025_fix/kwithin_combined_METABRIC_TCGA.csv", row.names=FALSE)
 
-# ME: two-sided Wilcoxon on samples, converted to one-sided (Basal higher) with two2one
+# ME: two-sided Wilcoxon on samples, converted to one-sided (Basal higher, Basal lower) with two2one
 me_test<-function(ME, subtype){
   res<-NULL
   for(o in c("LumA", "LumB", "Her2")){
@@ -473,17 +465,43 @@ me_test<-function(ME, subtype){
       x<-ME[which(subtype=="Basal"), m]; y<-ME[which(subtype==o), m]
       w<-wilcox.test(x, y, alternative="two.sided")
       res<-rbind(res, data.frame(module=m, comparison=paste0("Basal_vs_", o), delta_median=median(x)-median(y),
-                                 p_two_sided=w$p.value, p_basal_higher=two2one(w$p.value, invert=w$statistic<length(x)*length(y)/2)))
+                                 p_two_sided=w$p.value, p_basal_higher=two2one(w$p.value, invert=w$statistic<length(x)*length(y)/2),
+                                 p_basal_lower=two2one(w$p.value, invert=w$statistic>=length(x)*length(y)/2)))
     }
   }
   res
 }
 stopifnot(identical(rownames(MEs_basal), rownames(meta)), identical(rownames(pcaproj), anno$barcode))
-me<-comb_p(merge(me_test(MEs_basal, meta$NOT_IN_OSLOVAL_Pam50Subtype), me_test(pcaproj, anno$subtype), by=c("module", "comparison"), suffixes=c("_METABRIC", "_TCGA")),
-           "p_basal_higher_METABRIC", "p_basal_higher_TCGA")
+me_mt<-merge(me_test(MEs_basal, meta$NOT_IN_OSLOVAL_Pam50Subtype), me_test(pcaproj, anno$subtype), by=c("module", "comparison"), suffixes=c("_METABRIC", "_TCGA"))
+me<-comb_p(me_mt, "p_basal_higher_METABRIC", "p_basal_higher_TCGA")
 write.csv(me, "results/2025_fix/ME_basal_vs_subtypes_combined_METABRIC_TCGA.csv", row.names=FALSE)
+me_low<-comb_p(me_mt, "p_basal_lower_METABRIC", "p_basal_lower_TCGA")
+write.csv(me_low, "results/2025_fix/ME_basal_lower_vs_subtypes_combined_METABRIC_TCGA.csv", row.names=FALSE)
 
 sel<-merge(aggregate(cbind(kwithin_higher_stouffer=fdr_stouffer<0.05, kwithin_higher_fisher=fdr_fisher<0.05,
+                           kwithin_higher_both=fdr_stouffer<0.05 & fdr_fisher<0.05,
                            kwithin_higher_each_dataset=delta_kwithin_METABRIC>0 & fdr_METABRIC<0.05 & delta_kwithin_TCGA>0 & fdr_TCGA<0.05)~module, kw, all),
-           aggregate(cbind(ME_higher_stouffer=fdr_stouffer<0.05, ME_higher_fisher=fdr_fisher<0.05)~module, me, all), by="module")
+           merge(aggregate(cbind(ME_higher_stouffer=fdr_stouffer<0.05, ME_higher_fisher=fdr_fisher<0.05)~module, me, all),
+                 aggregate(cbind(ME_lower_stouffer=fdr_stouffer<0.05, ME_lower_fisher=fdr_fisher<0.05)~module, me_low, all), by="module"), by="module")
 write.csv(sel, "results/2025_fix/basal_specific_modules.csv", row.names=FALSE)
+
+# summary heatmap: combined FDR per module and comparison, Stouffer and Fisher; * = FDR<0.05
+hm<-do.call(rbind, lapply(list("kWithin higher"=kw, "ME higher"=me, "ME lower"=me_low), function(d)
+  rbind(data.frame(module=d$module, comparison=sub("Basal_vs_", "", d$comparison), method="Stouffer", fdr=d$fdr_stouffer),
+        data.frame(module=d$module, comparison=sub("Basal_vs_", "", d$comparison), method="Fisher", fdr=d$fdr_fisher))))
+hm$test<-sub("\\.[0-9]+$", "", rownames(hm))
+hm$test<-factor(hm$test, levels=c("kWithin higher", "ME higher", "ME lower"))
+hm$method<-factor(hm$method, levels=c("Stouffer", "Fisher"))
+hm$comparison<-factor(hm$comparison, levels=c("LumA", "LumB", "Her2"))
+hm$module<-factor(hm$module, levels=rev(setdiff(unique(moduleColors_basal), "b_Unconnected")))
+p<-ggplot(hm, aes(x=comparison, y=module, fill=pmin(-log10(fdr), 10)))+geom_tile(colour="white")+
+  geom_text(aes(label=ifelse(fdr<0.05, "*", "")), vjust=0.75)+
+  scale_fill_gradient(low="white", high="#D73027", limits=c(0, 10), name="-log10 FDR\n(capped at 10)")+
+  facet_grid(.~test+method)+labs(x="Basal-like vs", y=NULL)+theme_classic()+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1), strip.background=element_blank())
+png("results/2025_fix/basal_specific_modules_FDR_heatmap.png", res=300, 3300, 2200)
+print(p)
+dev.off()
+pdf("results/2025_fix/basal_specific_modules_FDR_heatmap.pdf", 11, 7.5)
+print(p)
+dev.off()
